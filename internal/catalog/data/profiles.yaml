@@ -1,0 +1,76 @@
+# Built-in profiles. A profile lists artifacts for all platforms; only the
+# artifacts that apply to the host platform are collected. Artifact order
+# defines collection order (and therefore what is kept first when a size or
+# time limit is reached).
+profiles:
+  - name: minimal
+    description: Smallest and fastest profile with key system artifacts (registry hives, event logs, execution evidence, persistence, auth logs, shell history).
+    artifacts:
+      # Windows
+      - windows.registry.system
+      - windows.registry.user
+      - windows.registry.amcache
+      - windows.prefetch
+      - windows.eventlogs
+      - windows.scheduled_tasks
+      - windows.startup_folders
+      - windows.powershell_history
+      # Linux
+      - linux.accounts
+      - linux.logs.auth
+      - linux.persistence.cron
+      - linux.persistence.systemd
+      - linux.persistence.init
+      - linux.system_info
+      # Linux and macOS
+      - unix.shell_history
+      - unix.ssh
+      # macOS
+      - macos.system_info
+      - macos.persistence
+      - macos.logs
+
+  - name: standard
+    description: Default incident response triage. Adds file system metadata (NTFS $MFT, $LogFile, $UsnJrnl), SRUM, WMI, user activity, browsers, full /var/log and macOS unified logs.
+    include: [minimal]
+    artifacts:
+      - windows.ntfs.mft
+      - windows.ntfs.usnjrnl
+      - windows.ntfs.logfile
+      - windows.srum
+      - windows.pca
+      - windows.wmi_repository
+      - windows.group_policy
+      - windows.recent_files
+      - windows.activities_cache
+      - windows.notifications
+      - windows.webcache
+      - windows.recycle_bin
+      - windows.setupapi_logs
+      - windows.hosts
+      - windows.firewall_logs
+      - windows.bits
+      - windows.user_access_logging
+      - windows.defender
+      - windows.ssh
+      - windows.remote_access_tools
+      - linux.accounts.shadow
+      - linux.logs.var_log
+      - linux.packages
+      - linux.web_server_config
+      - unix.shell_config
+      - macos.accounts
+      - macos.unified_logs
+      - macos.fsevents
+      - macos.quarantine_events
+      - macos.knowledgec
+      - macos.tcc
+      - macos.install_history
+      - macos.recent_items
+      - browser.*
+
+  - name: full
+    description: Every built-in artifact for the platform, including large ones (systemd journal, RPM database, IIS logs, thumbnail and RDP caches, all application logs).
+    include: [standard]
+    artifacts:
+      - '*'

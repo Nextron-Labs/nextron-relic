@@ -1,0 +1,41 @@
+# Example: configuration as ASGARD could generate it for a Windows triage
+# playbook. The playbook would
+#   1. download relic.exe and this file to C:\ProgramData\Nextron\Relic\
+#   2. run: relic.exe collect -c C:\ProgramData\Nextron\Relic\job.yaml --json -q
+#   3. upload C:\ProgramData\Nextron\Relic\out\relic.zip
+# The fixed output name lets the upload step reference the archive; the
+# archive only appears under that name once it is complete.
+version: 1
+job:
+  id: asgard-task-18342
+  name: Ransomware triage HR-PC-017
+  labels:
+    case: IR-2026-0042
+    requested_by: soc
+collect:
+  profile: standard
+  artifacts:
+    - windows.rdp_bitmap_cache
+  exclude_artifacts:
+    - browser.brave
+  custom_artifacts:
+    - name: custom.ransom_notes
+      description: Ransom notes on the desktop and in public folders
+      sources:
+        - os: [windows]
+          paths:
+            - '%UserHome%\Desktop\*{README,DECRYPT,RECOVER}*.{txt,html,hta}'
+            - '%SystemDrive%\Users\Public\*{README,DECRYPT,RECOVER}*.{txt,html,hta}'
+  # A literal '%' is written as '%%' (event log file names contain %4).
+  exclude_paths:
+    - '%SystemRoot%\System32\winevt\Logs\Microsoft-Windows-Diagnostics-Performance%%4Operational.evtx'
+  hashes: [md5, sha1, sha256]
+limits:
+  max_file_size: 2GiB
+  max_total_size: 16GiB
+  max_duration: 2h
+  min_free_space: 5GiB
+  priority: low
+output:
+  path: 'C:\ProgramData\Nextron\Relic\out\relic.zip'
+  overwrite: true

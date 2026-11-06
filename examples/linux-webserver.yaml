@@ -1,0 +1,28 @@
+# Example: Linux web server compromise. Standard triage plus web roots'
+# scripts modified by an attacker are typical targets; here the PHP files
+# below /var/www are added with a size limit, and caches are excluded.
+version: 1
+job:
+  id: ir-web-01
+collect:
+  profile: standard
+  artifacts:
+    - linux.logs.journal
+  custom_artifacts:
+    - name: custom.webroot_scripts
+      description: Server-side scripts in the web root (webshell hunting)
+      sources:
+        - os: [linux]
+          paths:
+            - '/var/www/**/*.{php,phtml,php5,jsp,jspx,aspx,cgi,pl,py}'
+          exclude:
+            - '/var/www/**/vendor/**'
+            - '/var/www/**/node_modules/**'
+  exclude_paths:
+    - '/var/log/**/*.journal~'
+limits:
+  max_file_size: 256MiB
+  max_total_size: 8GiB
+  max_duration: 1h
+output:
+  path: '/var/tmp/relic_{hostname}_{timestamp}.zip'

@@ -1,0 +1,164 @@
+# Built-in Linux artifacts. %UserHome% expands to /root, every directory
+# below /home and every existing home directory listed in /etc/passwd
+# (service accounts such as www-data or postgres included).
+artifacts:
+  - name: linux.accounts
+    category: accounts
+    description: Local users, groups and sudo configuration.
+    sources:
+      - os: [linux]
+        paths:
+          - '/etc/{passwd,group,sudoers,login.defs}'
+          - '/etc/sudoers.d/*'
+
+  - name: linux.accounts.shadow
+    category: accounts
+    description: Shadow password files (password hashes and password change dates).
+    sources:
+      - os: [linux]
+        paths:
+          - '/etc/{shadow,gshadow}'
+
+  - name: linux.logs.auth
+    category: logs
+    description: Authentication, system and audit logs including rotated files, wtmp/btmp/lastlog.
+    sources:
+      - os: [linux]
+        paths:
+          - '/var/log/{auth.log,secure,syslog,messages,kern.log}*'
+          - '/var/log/audit/audit.log*'
+          - '/var/log/{wtmp,btmp,lastlog,faillog}*'
+
+  - name: linux.logs.var_log
+    category: logs
+    description: Everything below /var/log except the systemd journal.
+    sources:
+      - os: [linux]
+        paths:
+          - '/var/log/**'
+        exclude:
+          - '/var/log/journal/**'
+
+  - name: linux.logs.journal
+    category: logs
+    description: Persistent and volatile systemd journal files.
+    sources:
+      - os: [linux]
+        paths:
+          - '/var/log/journal/**'
+          - '/run/log/journal/**'
+
+  - name: linux.persistence.cron
+    category: persistence
+    description: cron, anacron and at job definitions and spool directories.
+    sources:
+      - os: [linux]
+        paths:
+          - '/etc/{crontab,anacrontab}'
+          - '/etc/cron.{d,hourly,daily,weekly,monthly}/*'
+          - '/etc/{cron,at}.{allow,deny}'
+          - '/var/spool/cron/**'
+          - '/var/spool/anacron/*'
+          - '/var/spool/at/**'
+
+  - name: linux.persistence.systemd
+    category: persistence
+    description: Local and runtime systemd units and configuration, user units.
+    sources:
+      - os: [linux]
+        paths:
+          - '/etc/systemd/**'
+          - '/run/systemd/{system,user}/**'
+          - '%UserHome%/.config/systemd/user/**'
+
+  - name: linux.persistence.systemd_vendor
+    category: persistence
+    description: Vendor-supplied systemd units below /usr/lib/systemd.
+    sources:
+      - os: [linux]
+        paths:
+          - '/usr/lib/systemd/{system,user}/*'
+
+  - name: linux.persistence.init
+    category: persistence
+    description: SysV init scripts, rc.local, shell profiles, dynamic linker preload, kernel module, udev, motd and XDG autostart configuration.
+    sources:
+      - os: [linux]
+        paths:
+          - '/etc/{rc.local,profile,bash.bashrc,environment,ld.so.preload,ld.so.conf,modules}'
+          - '/etc/rc.d/rc.local'
+          - '/etc/init.d/*'
+          - '/etc/init/*.conf'
+          - '/etc/{profile.d,ld.so.conf.d,modules-load.d,modprobe.d,update-motd.d,udev/rules.d,xdg/autostart}/*'
+          - '%UserHome%/.config/autostart/*'
+
+  - name: linux.system_info
+    category: system
+    description: Host identity, release, time zone, mounts, name resolution, PAM, syslog, sysctl and package sources.
+    sources:
+      - os: [linux]
+        paths:
+          - '/etc/{hostname,machine-id,timezone,localtime,os-release,lsb-release,debian_version,fstab,crypttab,exports}'
+          - '/etc/{hosts,hosts.allow,hosts.deny,resolv.conf,nsswitch.conf,issue,issue.net}'
+          - '/etc/{rsyslog.conf,sysctl.conf,pam.conf,sudo.conf}'
+          - '/etc/*-release'
+          - '/etc/{sysctl.d,rsyslog.d,pam.d,netplan,yum.repos.d,apt/sources.list.d}/*'
+          - '/etc/apt/sources.list'
+          - '/etc/network/interfaces'
+
+  - name: linux.packages
+    category: system
+    description: Installed package inventory (dpkg status) and package manager logs.
+    sources:
+      - os: [linux]
+        paths:
+          - '/var/lib/dpkg/status'
+          - '/var/log/{dpkg.log,yum.log,dnf.log,dnf.rpm.log}*'
+          - '/var/log/apt/{history.log,term.log}*'
+
+  - name: linux.packages.rpmdb
+    category: system
+    description: RPM package database (can be 100 MB or more).
+    sources:
+      - os: [linux]
+        paths:
+          - '/var/lib/rpm/{Packages,rpmdb.sqlite}'
+
+  - name: linux.web_server_config
+    category: system
+    description: nginx and Apache httpd configuration.
+    sources:
+      - os: [linux]
+        paths:
+          - '/etc/{nginx,apache2,httpd}/**'
+
+  - name: unix.shell_history
+    category: execution
+    description: Shell, REPL and tool histories of every user (bash, zsh, fish, python, mysql, psql, less, vim, wget).
+    sources:
+      - os: [linux, darwin]
+        paths:
+          - '%UserHome%/.{bash_history,zsh_history,sh_history,ash_history,history,python_history,mysql_history,psql_history,sqlite_history,rediscli_history,node_repl_history,lesshst,viminfo,wget-hsts}'
+          - '%UserHome%/.local/share/fish/fish_history'
+      - os: [darwin]
+        paths:
+          - '%UserHome%/.zsh_sessions/*'
+
+  - name: unix.shell_config
+    category: persistence
+    description: Per-user shell startup files and git configuration.
+    sources:
+      - os: [linux, darwin]
+        paths:
+          - '%UserHome%/.{bashrc,bash_profile,bash_login,bash_logout,profile,zshrc,zshenv,zprofile,zlogin,zlogout,inputrc,gitconfig,selected_editor}'
+          - '%UserHome%/.config/fish/config.fish'
+
+  - name: unix.ssh
+    category: remote_access
+    description: SSH server/client configuration and per-user authorized_keys, known_hosts and config (no private keys).
+    sources:
+      - os: [linux, darwin]
+        paths:
+          - '/etc/ssh/{sshd_config,ssh_config}'
+          - '/etc/ssh/{sshd_config.d,ssh_config.d}/*'
+          - '%UserHome%/.ssh/{authorized_keys,authorized_keys2,known_hosts,config}'
