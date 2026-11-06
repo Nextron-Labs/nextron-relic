@@ -1,0 +1,67 @@
+name: release
+
+# Pushing a version tag builds and publishes a GitHub release:
+#
+#   git tag v0.1.0 && git push origin v0.1.0
+#
+# Accepted tags: v<major>.<minor>[.<patch>][-<pre-release>], e.g. v0.1,
+# v0.1.0, v1.2.3-rc.1. Tags with a pre-release suffix are published as
+# pre-releases.
+#
+# If a (draft) release for the tag already exists, its title and notes are
+# kept, the binaries are attached and the draft is published. Otherwise the
+# release is created with the notes of the version's CHANGELOG.md section
+# (or GitHub's generated notes if there is none).
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    needs: ci
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Check tag
+        run: |
+          if ! printf '%s' "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+(\.[0-9]+)?(-[0-9A-Za-z.-]+)?$'; then
+            echo "::error::tag $TAG is not a version tag (expected e.g. v0.1.0 or v1.2.3-rc.1)"
+            exit 1
+          fi
+          echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
+
+      - name: Build binaries
+        run: make dist VERSION="$VERSION" COMMIT="$(git rev-parse --short=12 HEAD)"
+
+      - name: Verify version stamp
+        run: |
+          out="$(./dist/relic-"$VERSION"-linux-amd64 version)"
+          echo "$out"
+          case "$out" in "relic $VERSION "*) ;; *) echo "::error::binary reports '$out'"; exit 1 ;; esac
+          (cd dist && sha256sum -c SHA256SUMS)
+
+      - name: Publish release
+        run: scripts/publish-release.sh "$TAG" dist/*

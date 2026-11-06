@@ -5,7 +5,8 @@
 #   make dist       cross-compile static binaries for all platforms into dist/
 #   make docker-test run the test suite on Linux in a container
 
-VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo 0.1.0-dev)
+# Version from the nearest tag without the leading "v" (v0.1.0 -> 0.1.0).
+VERSION ?= $(patsubst v%,%,$(shell git describe --tags --always --dirty 2>/dev/null || echo 0.1.0-dev))
 COMMIT  ?= $(shell git rev-parse --short=12 HEAD 2>/dev/null)
 PKG      = github.com/Nextron-Labs/nextron-relic
 LDFLAGS  = -s -w -X $(PKG)/internal/version.Version=$(VERSION) -X $(PKG)/internal/version.Commit=$(COMMIT)
@@ -38,7 +39,7 @@ dist:
 		echo "building $$out"; \
 		CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build $(GOFLAGS) -ldflags "$(LDFLAGS)" -o $$out ./cmd/relic || exit 1; \
 	done
-	@cd dist && shasum -a 256 relic-* > SHA256SUMS
+	@cd dist && if command -v sha256sum >/dev/null; then sha256sum relic-*; else shasum -a 256 relic-*; fi > SHA256SUMS
 
 docker-test:
 	docker run --rm -v "$(CURDIR)":/src -w /src golang:1.26-trixie go test ./...

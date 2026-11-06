@@ -58,7 +58,9 @@ access requires administrative rights; LocalSystem is sufficient.
 
 ## Installation
 
-Download the binary for your platform, or build it:
+Download the binary for your platform from the
+[GitHub releases](https://github.com/Nextron-Labs/nextron-relic/releases)
+and verify it with `SHA256SUMS`, or build it:
 
 ```bash
 make            # ./relic for the host (requires Go 1.26+)
@@ -92,6 +94,8 @@ Linux kernel 3.2.
   LocalSystem notes.
 - [Design notes](docs/design.md): architecture, CyLR comparison, THOR
   reuse, licensing, assumptions, roadmap.
+- [Releasing](docs/releasing.md): tag-triggered release workflow and assets.
+- [Changelog](CHANGELOG.md)
 
 ## Exit codes
 
