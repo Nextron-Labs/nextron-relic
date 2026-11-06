@@ -1,0 +1,54 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # Called by release.yml so that a release is only built after the full
+  # test matrix passed on the tagged commit.
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Test
+        run: go test -v ./...
+      # Linux tests again as root (O_NOATIME, unreadable files, all homes).
+      - name: Test as root
+        if: runner.os == 'Linux'
+        run: sudo -E env "PATH=$PATH" go test ./...
+      # Windows runners are elevated: the live raw NTFS tests read $MFT,
+      # $UsnJrnl:$J and the locked SYSTEM hive of the runner.
+      - name: Smoke test collection
+        shell: bash
+        run: |
+          go build -o relic-ci ./cmd/relic
+          ./relic-ci collect --profile minimal --output out/ --json -q --max-duration 10m > result.json || code=$?
+          cat result.json | head -c 4000
+          echo "exit code: ${code:-0}"
+          test "${code:-0}" -le 1
+
+  dist:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - run: make vet dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: relic-binaries
+          path: dist/

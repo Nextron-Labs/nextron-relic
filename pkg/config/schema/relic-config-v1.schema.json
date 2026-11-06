@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Nextron-Labs/nextron-relic/schema/relic-config-v1.schema.json",
+  "title": "Nextron Relic collection configuration, schema version 1",
+  "description": "Structural schema for Relic configuration files (YAML or JSON). Semantic checks such as path pattern syntax and artifact names are performed by 'relic validate'.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "collect"],
+  "properties": {
+    "version": {
+      "description": "Configuration schema version.",
+      "const": 1
+    },
+    "job": {
+      "description": "Free-form metadata copied into the result (e.g. the Management Center task).",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {"type": "string"},
+        "name": {"type": "string"},
+        "labels": {"type": "object", "additionalProperties": {"type": "string"}}
+      }
+    },
+    "collect": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "profile": {"description": "Built-in profile: minimal, standard or full.", "type": "string"},
+        "artifacts": {"description": "Artifact names or wildcards to add.", "type": "array", "items": {"type": "string", "minLength": 1}},
+        "exclude_artifacts": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "exclude_paths": {"description": "Path patterns that are never collected.", "type": "array", "items": {"type": "string", "minLength": 1}},
+        "custom_artifacts": {"type": "array", "items": {"$ref": "#/$defs/artifact"}},
+        "method": {"$ref": "#/$defs/method"},
+        "hashes": {"type": "array", "items": {"enum": ["md5", "sha1", "sha256", "sha512"]}},
+        "follow_symlinks": {"type": "boolean"},
+        "max_depth": {"type": "integer", "minimum": 1, "maximum": 256}
+      }
+    },
+    "limits": {
+      "description": "0 disables a limit.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "max_file_size": {"$ref": "#/$defs/size"},
+        "oversize": {"enum": ["skip", "truncate"]},
+        "max_total_size": {"$ref": "#/$defs/size"},
+        "max_files": {"type": "integer", "minimum": 0},
+        "max_duration": {"$ref": "#/$defs/duration"},
+        "min_free_space": {"$ref": "#/$defs/size"},
+        "max_memory": {"$ref": "#/$defs/size"},
+        "read_rate": {"description": "Bytes per second.", "$ref": "#/$defs/size"},
+        "priority": {"enum": ["low", "normal"]}
+      }
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "path": {"description": "Archive path or directory. Placeholders: {hostname}, {timestamp}, {job_id}.", "type": "string", "minLength": 1},
+        "compression": {"enum": ["auto", "deflate", "store"]},
+        "compression_level": {"type": "integer", "minimum": 1, "maximum": 9},
+        "overwrite": {"type": "boolean"}
+      }
+    }
+  },
+  "$defs": {
+    "method": {"enum": ["auto", "os", "raw"]},
+    "size": {
+      "description": "Bytes as integer, or a string with unit (B, KB/MB/GB/TB = 1000^n, KiB/MiB/GiB/TiB or K/M/G/T = 1024^n).",
+      "oneOf": [
+        {"type": "integer", "minimum": 0},
+        {"type": "string", "pattern": "^\\s*[0-9]+(\\.[0-9]+)?\\s*([bB]|[kKmMgGtT]([iI]?[bB])?)?\\s*$"}
+      ]
+    },
+    "duration": {
+      "description": "Seconds as integer, or a Go duration string such as 30m, 2h or 1h30m.",
+      "oneOf": [
+        {"type": "integer", "minimum": 0},
+        {"type": "string", "pattern": "^(0|([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))+)$"}
+      ]
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "sources"],
+      "properties": {
+        "name": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]*$"},
+        "description": {"type": "string"},
+        "category": {"type": "string"},
+        "references": {"type": "array", "items": {"type": "string"}},
+        "sources": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/source"}}
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["paths"],
+      "properties": {
+        "type": {"enum": ["file"]},
+        "os": {"type": "array", "items": {"enum": ["windows", "linux", "darwin", "macos"]}},
+        "paths": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "exclude": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "method": {"$ref": "#/$defs/method"},
+        "trim_sparse": {"type": "boolean"}
+      }
+    }
+  }
+}

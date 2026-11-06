@@ -1,0 +1,122 @@
+# Built-in macOS artifacts. %UserHome% expands to every directory below
+# /Users and to /var/root. Several locations are protected by TCC; without
+# Full Disk Access for the collector these are reported as access errors.
+artifacts:
+  - name: macos.system_info
+    category: system
+    description: macOS version, local accounts files, hosts, sudoers, network and login window preferences.
+    sources:
+      - os: [darwin]
+        paths:
+          - '/System/Library/CoreServices/SystemVersion.plist'
+          - '/private/etc/{hosts,passwd,group,sudoers,resolv.conf,shells}'
+          - '/private/etc/sudoers.d/*'
+          - '/Library/Preferences/SystemConfiguration/{preferences.plist,NetworkInterfaces.plist,com.apple.airport.preferences.plist}'
+          - '/Library/Preferences/{com.apple.loginwindow.plist,com.apple.alf.plist,.GlobalPreferences.plist}'
+
+  - name: macos.accounts
+    category: accounts
+    description: Local directory service user records (include password hash data) and the admin group.
+    sources:
+      - os: [darwin]
+        paths:
+          - '/private/var/db/dslocal/nodes/Default/users/*.plist'
+          - '/private/var/db/dslocal/nodes/Default/groups/admin.plist'
+
+  - name: macos.persistence
+    category: persistence
+    description: Launch agents and daemons, startup items, login/background items, periodic scripts, cron/at tabs and emond rules.
+    sources:
+      - os: [darwin]
+        paths:
+          - '/Library/{LaunchAgents,LaunchDaemons}/*'
+          - '/System/Library/{LaunchAgents,LaunchDaemons}/*'
+          - '%UserHome%/Library/LaunchAgents/*'
+          - '/Library/StartupItems/**'
+          - '/private/etc/periodic/**'
+          - '/private/etc/{rc.common,launchd.conf,crontab}'
+          - '/private/etc/emond.d/**'
+          - '/private/var/at/tabs/*'
+          - '/private/var/db/com.apple.backgroundtaskmanagement/*'
+          - '%UserHome%/Library/Application Support/com.apple.backgroundtaskmanagementagent/backgrounditems.btm'
+
+  - name: macos.logs
+    category: logs
+    description: Classic log files below /private/var/log and crash/diagnostic reports.
+    sources:
+      - os: [darwin]
+        paths:
+          - '/private/var/log/**'
+          - '/Library/Logs/DiagnosticReports/**'
+          - '%UserHome%/Library/Logs/DiagnosticReports/**'
+
+  - name: macos.logs.all
+    category: logs
+    description: All application logs below /Library/Logs and the users' Library/Logs.
+    sources:
+      - os: [darwin]
+        paths:
+          - '/Library/Logs/**'
+          - '%UserHome%/Library/Logs/**'
+
+  - name: macos.unified_logs
+    category: logs
+    description: Unified logging tracev3 files and uuidtext (parse with 'log show --archive' after rebuilding a .logarchive). Often 1 GB or more.
+    sources:
+      - os: [darwin]
+        paths:
+          - '/private/var/db/diagnostics/**'
+          - '/private/var/db/uuidtext/**'
+
+  - name: macos.fsevents
+    category: file_system
+    description: File system event logs (.fseventsd) of the system and data volumes.
+    sources:
+      - os: [darwin]
+        paths:
+          - '/.fseventsd/*'
+          - '/System/Volumes/Data/.fseventsd/*'
+
+  - name: macos.quarantine_events
+    category: user_activity
+    description: LaunchServices quarantine events database (downloaded files and their origin).
+    sources:
+      - os: [darwin]
+        paths:
+          - '%UserHome%/Library/Preferences/com.apple.LaunchServices.QuarantineEventsV2'
+
+  - name: macos.knowledgec
+    category: user_activity
+    description: KnowledgeC databases (application usage, device state). TCC protected.
+    sources:
+      - os: [darwin]
+        paths:
+          - '/private/var/db/CoreDuet/Knowledge/knowledgeC.db*'
+          - '%UserHome%/Library/Application Support/Knowledge/knowledgeC.db*'
+
+  - name: macos.tcc
+    category: system
+    description: Transparency, Consent and Control databases (granted privacy permissions). Requires Full Disk Access.
+    sources:
+      - os: [darwin]
+        paths:
+          - '/Library/Application Support/com.apple.TCC/TCC.db'
+          - '%UserHome%/Library/Application Support/com.apple.TCC/TCC.db'
+
+  - name: macos.install_history
+    category: system
+    description: Software installation history and package receipts.
+    sources:
+      - os: [darwin]
+        paths:
+          - '/Library/Receipts/InstallHistory.plist'
+          - '/private/var/db/receipts/*.plist'
+
+  - name: macos.recent_items
+    category: user_activity
+    description: Shared file lists (recent documents, applications, servers) and Finder preferences.
+    sources:
+      - os: [darwin]
+        paths:
+          - '%UserHome%/Library/Application Support/com.apple.sharedfilelist/**'
+          - '%UserHome%/Library/Preferences/com.apple.finder.plist'

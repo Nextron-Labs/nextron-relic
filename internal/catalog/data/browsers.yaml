@@ -1,0 +1,80 @@
+# Built-in browser artifacts for all platforms. Cookies and saved
+# credentials (Cookies, Login Data, logins.json, key4.db) are intentionally
+# not collected by default; add a custom artifact if they are required.
+artifacts:
+  - name: browser.chrome
+    category: browser
+    description: Google Chrome history, bookmarks, preferences, shortcuts, top sites and extension manifests of all profiles.
+    sources:
+      - os: [windows]
+        paths:
+          - '%UserHome%\AppData\Local\Google\Chrome\User Data\*\{History,History-journal,Bookmarks,Preferences,Secure Preferences,Shortcuts,Top Sites,Visited Links,Favicons}'
+          - '%UserHome%\AppData\Local\Google\Chrome\User Data\*\Extensions\*\*\manifest.json'
+      - os: [linux]
+        paths:
+          - '%UserHome%/.config/google-chrome/*/{History,History-journal,Bookmarks,Preferences,Secure Preferences,Shortcuts,Top Sites,Visited Links,Favicons}'
+          - '%UserHome%/.config/google-chrome/*/Extensions/*/*/manifest.json'
+      - os: [darwin]
+        paths:
+          - '%UserHome%/Library/Application Support/Google/Chrome/*/{History,History-journal,Bookmarks,Preferences,Secure Preferences,Shortcuts,Top Sites,Visited Links,Favicons}'
+          - '%UserHome%/Library/Application Support/Google/Chrome/*/Extensions/*/*/manifest.json'
+
+  - name: browser.edge
+    category: browser
+    description: Microsoft Edge (Chromium) history, bookmarks, preferences and extension manifests of all profiles.
+    sources:
+      - os: [windows]
+        paths:
+          - '%UserHome%\AppData\Local\Microsoft\Edge\User Data\*\{History,History-journal,Bookmarks,Preferences,Secure Preferences,Shortcuts,Top Sites,Visited Links,Favicons}'
+          - '%UserHome%\AppData\Local\Microsoft\Edge\User Data\*\Extensions\*\*\manifest.json'
+      - os: [linux]
+        paths:
+          - '%UserHome%/.config/microsoft-edge/*/{History,History-journal,Bookmarks,Preferences,Secure Preferences,Shortcuts,Top Sites,Visited Links,Favicons}'
+      - os: [darwin]
+        paths:
+          - '%UserHome%/Library/Application Support/Microsoft Edge/*/{History,History-journal,Bookmarks,Preferences,Secure Preferences,Shortcuts,Top Sites,Visited Links,Favicons}'
+          - '%UserHome%/Library/Application Support/Microsoft Edge/*/Extensions/*/*/manifest.json'
+
+  - name: browser.brave
+    category: browser
+    description: Brave browser history, bookmarks and preferences of all profiles.
+    sources:
+      - os: [windows]
+        paths:
+          - '%UserHome%\AppData\Local\BraveSoftware\Brave-Browser\User Data\*\{History,History-journal,Bookmarks,Preferences,Shortcuts,Top Sites}'
+      - os: [linux]
+        paths:
+          - '%UserHome%/.config/BraveSoftware/Brave-Browser/*/{History,History-journal,Bookmarks,Preferences,Shortcuts,Top Sites}'
+      - os: [darwin]
+        paths:
+          - '%UserHome%/Library/Application Support/BraveSoftware/Brave-Browser/*/{History,History-journal,Bookmarks,Preferences,Shortcuts,Top Sites}'
+
+  - name: browser.firefox
+    category: browser
+    description: Mozilla Firefox history, downloads, form history, bookmarks backups, extensions and session state of all profiles.
+    sources:
+      - os: [windows]
+        paths:
+          - '%UserHome%\AppData\Roaming\Mozilla\Firefox\Profiles\*\{places,favicons,downloads,formhistory}.sqlite*'
+          - '%UserHome%\AppData\Roaming\Mozilla\Firefox\Profiles\*\{extensions.json,addons.json,prefs.js,handlers.json,sessionstore.jsonlz4}'
+          - '%UserHome%\AppData\Roaming\Mozilla\Firefox\Profiles\*\sessionstore-backups\*'
+      - os: [linux]
+        paths:
+          - '%UserHome%/.mozilla/firefox/*/{places,favicons,downloads,formhistory}.sqlite*'
+          - '%UserHome%/.mozilla/firefox/*/{extensions.json,addons.json,prefs.js,handlers.json,sessionstore.jsonlz4}'
+          - '%UserHome%/.mozilla/firefox/*/sessionstore-backups/*'
+          - '%UserHome%/snap/firefox/common/.mozilla/firefox/*/{places,favicons,downloads,formhistory}.sqlite*'
+          - '%UserHome%/snap/firefox/common/.mozilla/firefox/*/{extensions.json,addons.json,prefs.js,handlers.json,sessionstore.jsonlz4}'
+      - os: [darwin]
+        paths:
+          - '%UserHome%/Library/Application Support/Firefox/Profiles/*/{places,favicons,downloads,formhistory}.sqlite*'
+          - '%UserHome%/Library/Application Support/Firefox/Profiles/*/{extensions.json,addons.json,prefs.js,handlers.json,sessionstore.jsonlz4}'
+          - '%UserHome%/Library/Application Support/Firefox/Profiles/*/sessionstore-backups/*'
+
+  - name: browser.safari
+    category: browser
+    description: Safari history, downloads, bookmarks and last session. Requires Full Disk Access.
+    sources:
+      - os: [darwin]
+        paths:
+          - '%UserHome%/Library/Safari/{History.db*,Downloads.plist,Bookmarks.plist,LastSession.plist,TopSites.plist}'
