@@ -1,0 +1,296 @@
+# Built-in Windows artifacts.
+#
+# Paths use Relic pattern syntax (docs/configuration.md#path-patterns).
+# %UserHome% expands to every user profile directory found in the registry
+# ProfileList and below %SystemDrive%\Users. Files that are locked by the
+# operating system (registry hives, event logs, ESE databases) are read via
+# raw NTFS access automatically (method: auto).
+artifacts:
+  - name: windows.registry.system
+    category: registry
+    description: System registry hives (SAM, SECURITY, SOFTWARE, SYSTEM, DEFAULT) with transaction logs and RegBack copies.
+    sources:
+      - os: [windows]
+        paths:
+          - '%SystemRoot%\System32\config\{SAM,SECURITY,SOFTWARE,SYSTEM,DEFAULT}'
+          - '%SystemRoot%\System32\config\{SAM,SECURITY,SOFTWARE,SYSTEM,DEFAULT}.LOG{,1,2}'
+          - '%SystemRoot%\System32\config\RegBack\*'
+
+  - name: windows.registry.user
+    category: registry
+    description: Per-user registry hives NTUSER.DAT and UsrClass.dat with transaction logs (all profiles incl. service accounts).
+    sources:
+      - os: [windows]
+        paths:
+          - '%UserHome%\NTUSER.DAT'
+          - '%UserHome%\NTUSER.DAT.LOG{1,2}'
+          - '%UserHome%\AppData\Local\Microsoft\Windows\UsrClass.dat'
+          - '%UserHome%\AppData\Local\Microsoft\Windows\UsrClass.dat.LOG{1,2}'
+
+  - name: windows.registry.amcache
+    category: execution
+    description: Amcache.hve (program execution and installation evidence) and RecentFileCache.bcf (Windows 7).
+    sources:
+      - os: [windows]
+        paths:
+          - '%SystemRoot%\AppCompat\Programs\Amcache.hve'
+          - '%SystemRoot%\AppCompat\Programs\Amcache.hve.LOG{1,2}'
+          - '%SystemRoot%\AppCompat\Programs\RecentFileCache.bcf'
+
+  - name: windows.eventlogs
+    category: logs
+    description: Windows event logs (EVTX) of all channels.
+    sources:
+      - os: [windows]
+        paths:
+          - '%SystemRoot%\System32\winevt\Logs\*.evtx'
+
+  - name: windows.prefetch
+    category: execution
+    description: Prefetch files (program execution evidence).
+    sources:
+      - os: [windows]
+        paths:
+          - '%SystemRoot%\Prefetch\*.pf'
+
+  - name: windows.srum
+    category: execution
+    description: System Resource Usage Monitor database (application and network usage per user).
+    sources:
+      - os: [windows]
+        paths:
+          - '%SystemRoot%\System32\sru\*'
+
+  - name: windows.pca
+    category: execution
+    description: Program Compatibility Assistant launch records (Windows 11).
+    sources:
+      - os: [windows]
+        paths:
+          - '%SystemRoot%\appcompat\pca\*'
+
+  - name: windows.scheduled_tasks
+    category: persistence
+    description: Scheduled task definitions (XML and legacy .job) and the task scheduler log.
+    sources:
+      - os: [windows]
+        paths:
+          - '%SystemRoot%\System32\Tasks\**'
+          - '%SystemRoot%\Tasks\**'
+          - '%SystemRoot%\SchedLgU.Txt'
+
+  - name: windows.startup_folders
+    category: persistence
+    description: Contents of the per-machine and per-user Startup folders.
+    sources:
+      - os: [windows]
+        paths:
+          - '%ProgramData%\Microsoft\Windows\Start Menu\Programs\Startup\**'
+          - '%UserHome%\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\**'
+
+  - name: windows.wmi_repository
+    category: persistence
+    description: WMI repository (CIM database), used to detect WMI event subscription persistence.
+    sources:
+      - os: [windows]
+        paths:
+          - '%SystemRoot%\System32\wbem\Repository\*'
+
+  - name: windows.group_policy
+    category: persistence
+    description: Local Group Policy files including logon/startup scripts.
+    sources:
+      - os: [windows]
+        paths:
+          - '%SystemRoot%\System32\GroupPolicy\**'
+          - '%SystemRoot%\System32\GroupPolicyUsers\**'
+
+  - name: windows.powershell_history
+    category: execution
+    description: PSReadLine console history of every user.
+    sources:
+      - os: [windows]
+        paths:
+          - '%UserHome%\AppData\Roaming\Microsoft\Windows\PowerShell\PSReadLine\*_history.txt'
+
+  - name: windows.recent_files
+    category: user_activity
+    description: LNK files and jump lists (AutomaticDestinations, CustomDestinations) and Office recent files.
+    sources:
+      - os: [windows]
+        paths:
+          - '%UserHome%\AppData\Roaming\Microsoft\Windows\Recent\**'
+          - '%UserHome%\AppData\Roaming\Microsoft\Office\Recent\*'
+
+  - name: windows.activities_cache
+    category: user_activity
+    description: Windows Timeline database (ActivitiesCache.db).
+    sources:
+      - os: [windows]
+        paths:
+          - '%UserHome%\AppData\Local\ConnectedDevicesPlatform\*\ActivitiesCache.db*'
+
+  - name: windows.notifications
+    category: user_activity
+    description: Windows push notification database.
+    sources:
+      - os: [windows]
+        paths:
+          - '%UserHome%\AppData\Local\Microsoft\Windows\Notifications\wpndatabase.db*'
+
+  - name: windows.webcache
+    category: browser
+    description: WebCache ESE database (Internet Explorer / legacy Edge history, file access via file:// URLs).
+    sources:
+      - os: [windows]
+        paths:
+          - '%UserHome%\AppData\Local\Microsoft\Windows\WebCache\*'
+
+  - name: windows.recycle_bin
+    category: file_system
+    description: Recycle Bin $I metadata files (original path, size and deletion time; not the deleted content).
+    sources:
+      - os: [windows]
+        paths:
+          - '%SystemDrive%\$Recycle.Bin\*\$I*'
+
+  - name: windows.ntfs.mft
+    category: file_system
+    description: NTFS Master File Table of the system drive (read via raw NTFS access).
+    sources:
+      - os: [windows]
+        method: raw
+        paths:
+          - '%SystemDrive%\$MFT'
+
+  - name: windows.ntfs.logfile
+    category: file_system
+    description: NTFS transaction log ($LogFile) of the system drive (raw NTFS access).
+    sources:
+      - os: [windows]
+        method: raw
+        paths:
+          - '%SystemDrive%\$LogFile'
+
+  - name: windows.ntfs.usnjrnl
+    category: file_system
+    description: NTFS change journal $UsnJrnl:$J of the system drive. The leading sparse region is skipped; its offset is recorded in the manifest.
+    sources:
+      - os: [windows]
+        method: raw
+        trim_sparse: true
+        paths:
+          - '%SystemDrive%\$Extend\$UsnJrnl:$J'
+
+  - name: windows.ntfs.boot
+    category: file_system
+    description: NTFS boot sector file ($Boot) of the system drive.
+    sources:
+      - os: [windows]
+        method: raw
+        paths:
+          - '%SystemDrive%\$Boot'
+
+  - name: windows.ntfs.secure
+    category: file_system
+    description: NTFS security descriptor stream ($Secure:$SDS) of the system drive.
+    sources:
+      - os: [windows]
+        method: raw
+        paths:
+          - '%SystemDrive%\$Secure:$SDS'
+
+  - name: windows.setupapi_logs
+    category: devices
+    description: SetupAPI device installation logs (USB device history).
+    sources:
+      - os: [windows]
+        paths:
+          - '%SystemRoot%\inf\setupapi*.log'
+
+  - name: windows.hosts
+    category: network
+    description: hosts, lmhosts, networks, protocol and services files.
+    sources:
+      - os: [windows]
+        paths:
+          - '%SystemRoot%\System32\drivers\etc\{hosts,lmhosts.sam,networks,protocol,services}'
+
+  - name: windows.firewall_logs
+    category: network
+    description: Windows Firewall logs.
+    sources:
+      - os: [windows]
+        paths:
+          - '%SystemRoot%\System32\LogFiles\Firewall\*.log'
+
+  - name: windows.bits
+    category: network
+    description: Background Intelligent Transfer Service queue database (qmgr).
+    sources:
+      - os: [windows]
+        paths:
+          - '%ProgramData%\Microsoft\Network\Downloader\*'
+
+  - name: windows.user_access_logging
+    category: logs
+    description: User Access Logging databases (Windows Server).
+    sources:
+      - os: [windows]
+        paths:
+          - '%SystemRoot%\System32\LogFiles\Sum\*'
+
+  - name: windows.defender
+    category: logs
+    description: Microsoft Defender support logs (MPLog) and detection history.
+    sources:
+      - os: [windows]
+        paths:
+          - '%ProgramData%\Microsoft\Windows Defender\Support\*.log'
+          - '%ProgramData%\Microsoft\Windows Defender\Scans\History\Service\DetectionHistory\**'
+
+  - name: windows.ssh
+    category: remote_access
+    description: OpenSSH for Windows server configuration, logs and user authorized_keys/known_hosts (no private keys).
+    sources:
+      - os: [windows]
+        paths:
+          - '%ProgramData%\ssh\{sshd_config,administrators_authorized_keys}'
+          - '%ProgramData%\ssh\logs\*'
+          - '%UserHome%\.ssh\{authorized_keys,known_hosts,config}'
+
+  - name: windows.remote_access_tools
+    category: remote_access
+    description: Logs and connection traces of common remote administration tools (AnyDesk, TeamViewer).
+    sources:
+      - os: [windows]
+        paths:
+          - '%ProgramData%\AnyDesk\*.{trace,conf}'
+          - '%UserHome%\AppData\Roaming\AnyDesk\*.{trace,conf}'
+          - '%ProgramFiles%\TeamViewer\*.log'
+          - '%ProgramFiles(x86)%\TeamViewer\*.log'
+          - '%UserHome%\AppData\Roaming\TeamViewer\*.{txt,log}'
+
+  - name: windows.rdp_bitmap_cache
+    category: remote_access
+    description: RDP client bitmap cache (screen fragments of outgoing RDP sessions).
+    sources:
+      - os: [windows]
+        paths:
+          - '%UserHome%\AppData\Local\Microsoft\Terminal Server Client\Cache\*'
+
+  - name: windows.thumbcache
+    category: user_activity
+    description: Explorer thumbnail and icon caches.
+    sources:
+      - os: [windows]
+        paths:
+          - '%UserHome%\AppData\Local\Microsoft\Windows\Explorer\{thumbcache,iconcache}_*.db'
+
+  - name: windows.iis_logs
+    category: logs
+    description: IIS web server logs (can be large on busy servers).
+    sources:
+      - os: [windows]
+        paths:
+          - '%SystemDrive%\inetpub\logs\LogFiles\**'

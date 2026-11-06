@@ -1,0 +1,27 @@
+# Example: macOS system triage without user content.
+version: 1
+job:
+  id: example-macos-001
+  name: macOS system triage
+  labels:
+    case: IR-2026-0042
+collect:
+  artifacts:
+    - macos.system_info
+    - macos.persistence
+    - macos.logs
+  custom_artifacts:
+    - name: custom.homebrew_inventory
+      description: Homebrew installed package receipts (example custom artifact)
+      sources:
+        - os: [darwin]
+          paths:
+            - '/opt/homebrew/Cellar/*/*/INSTALL_RECEIPT.json'
+            - '/usr/local/Cellar/*/*/INSTALL_RECEIPT.json'
+  hashes: [md5, sha1, sha256]
+limits:
+  max_file_size: 256MiB
+  max_total_size: 2GiB
+  max_duration: 15m
+output:
+  path: '{hostname}_{job_id}_{timestamp}.zip'
