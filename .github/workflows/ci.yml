@@ -2,7 +2,14 @@ name: ci
 
 on:
   push:
+    branches: [main]
   pull_request:
+  # Called by release.yml so that a release is only built after the full
+  # test matrix passed on the tagged commit.
+  workflow_call:
+
+permissions:
+  contents: read
 
 jobs:
   test:
