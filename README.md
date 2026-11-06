@@ -52,8 +52,9 @@ relic config schema                          # JSON Schema of the configuration
 ```
 
 Run as administrator / root to collect everything. Without privileges Relic
-still runs and reports every unreadable file and directory. Windows raw NTFS
-access requires administrative rights; LocalSystem is sufficient.
+still runs and reports every unreadable file and directory. Raw NTFS access
+on Windows requires an elevated process: an administrator account or
+LocalSystem (e.g. when started by the Management Center).
 
 ## Installation
 

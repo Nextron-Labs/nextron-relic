@@ -11,7 +11,7 @@ import (
 const Supported = true
 
 // OpenDevice opens the NTFS volume of a drive letter ("C:") for raw reading.
-// It requires administrative privileges (LocalSystem is sufficient).
+// It requires an elevated process (administrator or LocalSystem).
 func OpenDevice(drive string) (*Volume, error) {
 	f, err := os.Open(`\\.\` + drive)
 	if err != nil {

@@ -6,6 +6,11 @@ as the release notes when its tag is pushed (see `docs/releasing.md`).
 
 ## [Unreleased]
 
+### Changed
+
+- Clarified that raw NTFS access on Windows needs an elevated process
+  (administrator or LocalSystem).
+
 ## [0.1.0]
 
 First public version of Relic, a cross-platform collector for forensic
