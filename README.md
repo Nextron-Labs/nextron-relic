@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/logo/relic-logo.png" alt="Relic logo" width="400">
+</p>
+
 # Nextron Relic
 
 Relic is a cross-platform collector for forensic artifacts on Windows, Linux
