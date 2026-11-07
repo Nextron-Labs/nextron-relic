@@ -143,6 +143,7 @@ artifacts:
       - os: [darwin]
         paths:
           - '%UserHome%/.zsh_sessions/*'
+          - '%UserHome%/.bash_sessions/*'
 
   - name: unix.shell_config
     category: persistence
@@ -155,10 +156,10 @@ artifacts:
 
   - name: unix.ssh
     category: remote_access
-    description: SSH server/client configuration and per-user authorized_keys, known_hosts and config (no private keys).
+    description: SSH server/client configuration, login scripts (sshrc, ~/.ssh/rc, ~/.ssh/environment) and per-user authorized_keys, known_hosts and config (no private keys).
     sources:
       - os: [linux, darwin]
         paths:
-          - '/etc/ssh/{sshd_config,ssh_config}'
+          - '/etc/ssh/{sshd_config,ssh_config,sshrc}'
           - '/etc/ssh/{sshd_config.d,ssh_config.d}/*'
-          - '%UserHome%/.ssh/{authorized_keys,authorized_keys2,known_hosts,config}'
+          - '%UserHome%/.ssh/{authorized_keys,authorized_keys2,known_hosts,config,rc,environment}'

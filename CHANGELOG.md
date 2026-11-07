@@ -6,6 +6,43 @@ as the release notes when its tag is pushed (see `docs/releasing.md`).
 
 ## [Unreleased]
 
+### Added
+
+- **`relic verify <archive>`** checks an archive without extracting it: ZIP
+  structure and CRC-32 of every entry, the metadata files, every stored file
+  against the size and hashes in `files.jsonl`, and the manifest counters.
+  `--result status.json` also checks the archive size and SHA-256 against the
+  collection result. Exit code 0 verified, 2 problems found. The release
+  smoke test runs it on every built binary.
+- **Ad-hoc paths:** `--path` collects files matching a path pattern (artifact
+  `cli.paths`, repeatable); `--exclude-path` excludes paths.
+- **Job metadata flags:** `--job-id`, `--job-name`, `--label key=value`.
+- **Flags for configuration values** that previously needed a file: `--hash`,
+  `--follow-symlinks`, `--compression`, `--compression-level`, `--oversize`,
+  `--max-files`, `--min-free-space`, `--read-rate`, `--priority`.
+- **Logging:**
+  - `-v`/`--verbose` (same as `--log-level debug`).
+  - `--log-file` writes the log as JSON lines with UTC timestamps (appended,
+    not affected by `-q`); it also survives runs that produce no archive.
+  - `--log-level debug` now also applies to `relic.log` in the archive.
+  - `--progress-interval` (default 15s, `0` disables); progress messages show
+    the artifact step (`5/34`) and the elapsed time.
+  - A warning at the start when Relic does not run elevated (root,
+    administrator/LocalSystem), and the start message records user and
+    elevation.
+- **`relic list artifacts --search/--category`** to find artifacts by words in
+  their name, description or paths, or by category.
+- **CLI reference** in `docs/cli.md`; flag help names the expected value
+  (`--max-file-size size`).
+
+### Changed
+
+- **Selection without a profile:** `relic collect -a <artifact>` or
+  `--path` without `--profile` and without `--config` now collects only what
+  was named. Before, the artifacts were added to the default `standard`
+  profile. Add `--profile standard` for the old behavior.
+- `relic.log` timestamps are UTC, like all other timestamps in the archive.
+
 ## [0.2.0]
 
 Maintenance release: archive naming fix, 32-bit Windows under WoW64, and a

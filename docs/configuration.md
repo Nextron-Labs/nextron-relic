@@ -160,7 +160,7 @@ Variables (case-insensitive):
 
 | Variable | Windows | Linux | macOS |
 |---|---|---|---|
-| `%UserHome%` | every profile from the registry ProfileList (including LocalSystem, LocalService, NetworkService) and every directory below `%SystemDrive%\Users` | `/root`, every directory below `/home`, every existing home in `/etc/passwd` (service accounts such as `www-data` included) | every directory below `/Users`, `/var/root` |
+| `%UserHome%` | every profile from the registry ProfileList (including LocalSystem, LocalService, NetworkService), the 32-bit LocalSystem profile `%SystemRoot%\SysWOW64\config\systemprofile`, and every directory below `%SystemDrive%\Users` | `/root`, every directory below `/home`, every existing home in `/etc/passwd` (service accounts such as `www-data` included) | every directory below `/Users`, `/var/root` |
 | `%SystemDrive%`, `%SystemRoot%`, `%WinDir%`, `%ProgramData%`, `%ProgramFiles%`, `%ProgramFiles(x86)%` | from the environment with sensible fallbacks; `%ProgramFiles(x86)%` expands to nothing on 32-bit Windows | – | – |
 | any other `%NAME%` | environment variable of the collector process (note: under LocalSystem, `%APPDATA%` etc. point to the system profile) | not available | not available |
 

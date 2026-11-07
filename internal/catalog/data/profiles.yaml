@@ -54,12 +54,53 @@ profiles:
       - windows.defender
       - windows.ssh
       - windows.remote_access_tools
+      - windows.rmm.*
+      - windows.av.*
+      - windows.powershell.transcripts
+      - windows.powershell.profiles
+      - windows.wer
+      - windows.cryptnet_url_cache
+      - windows.lateral.impacket
+      - windows.appcompat.custom_shims
+      - windows.office.persistence
+      - windows.rdp_client_files
+      - windows.vpn_clients
+      - windows.network_scanners
+      - windows.capability_access
+      - windows.startupinfo
+      - windows.logs.debug
+      - windows.notepad
+      - windows.ad.sysvol
+      - windows.iis.config
+      - windows.exchange.webshells
+      - windows.mssql.errorlog
+      - windows.dhcp_server
+      - windows.backup.veeam
+      - windows.web.tomcat
       - linux.accounts.shadow
       - linux.logs.var_log
       - linux.packages
       - linux.web_server_config
       - unix.shell_config
       - macos.accounts
+      - macos.gatekeeper
+      - macos.xprotect
+      - macos.persistence.auth
+      - macos.persistence.user_apps
+      - macos.persistence.plugins
+      - macos.privileged_helpers
+      - macos.extensions
+      - macos.managed_config
+      - macos.login_records
+      - macos.terminal_state
+      - macos.coreanalytics
+      - macos.network_usage
+      - macos.remote_access_tools
+      - macos.biome
+      - macos.spotlight_shortcuts
+      - macos.devices
+      - macos.app_inventory
+      - macos.preferences
       - macos.unified_logs
       - macos.fsevents
       - macos.quarantine_events
@@ -70,7 +111,7 @@ profiles:
       - browser.*
 
   - name: full
-    description: Every built-in artifact for the platform, including large ones (systemd journal, RPM database, IIS logs, thumbnail and RDP caches, all application logs).
+    description: Every built-in artifact for the platform, including large ones (systemd journal, RPM database, IIS and Exchange logs, ETL traces, staging folders, Windows.old, thumbnail and RDP caches, all Biome streams, PowerLog, all application logs).
     include: [standard]
     artifacts:
       - '*'
