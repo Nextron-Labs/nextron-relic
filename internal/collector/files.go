@@ -2,14 +2,8 @@ package collector
 
 import (
 	"context"
-	"crypto/md5"
-	"crypto/sha1"
-	"crypto/sha256"
-	"crypto/sha512"
-	"encoding/hex"
 	"errors"
 	"fmt"
-	"hash"
 	"io"
 	"io/fs"
 	"os"
@@ -18,6 +12,7 @@ import (
 
 	"github.com/Nextron-Labs/nextron-relic/internal/archive"
 	"github.com/Nextron-Labs/nextron-relic/internal/catalog"
+	"github.com/Nextron-Labs/nextron-relic/internal/hashing"
 	"github.com/Nextron-Labs/nextron-relic/internal/hostinfo"
 	"github.com/Nextron-Labs/nextron-relic/internal/pathspec"
 	"github.com/Nextron-Labs/nextron-relic/internal/source"
@@ -50,7 +45,7 @@ func (a *artifactState) addError(msg string) {
 
 func (r *run) collectArtifact(ctx context.Context, s catalog.Selected) {
 	a := &artifactState{res: result.ArtifactResult{Name: s.Artifact.Name, Custom: s.Custom, Reason: s.Reason}}
-	r.log.Debug("collecting artifact", "artifact", s.Artifact.Name)
+	r.log.Debug("collecting artifact", "artifact", s.Artifact.Name, "step", fmt.Sprintf("%d/%d", r.step, r.steps))
 
 sources:
 	for si, src := range s.Sources {
@@ -409,19 +404,20 @@ func (r *run) writeRecord(rec *result.FileRecord) {
 }
 
 func (r *run) progress(artifact string) {
-	if time.Since(r.lastProgress) < 15*time.Second {
+	if r.progressIvl < 0 || time.Since(r.lastProgress) < r.progressIvl {
 		return
 	}
 	r.lastProgress = time.Now()
-	r.log.Info("progress", "artifact", artifact, "files", r.res.Summary.FilesCollected,
-		"bytes", r.res.Summary.BytesCollected, "failed", r.res.Summary.FilesFailed)
+	r.log.Info("progress", "artifact", artifact, "step", fmt.Sprintf("%d/%d", r.step, r.steps),
+		"files", r.res.Summary.FilesCollected, "bytes", r.res.Summary.BytesCollected,
+		"failed", r.res.Summary.FilesFailed, "elapsed_seconds", int(time.Since(r.res.StartedAt).Seconds()))
 }
 
 // copy streams src into dst, hashing on the fly. With limit > 0 at most
 // limit bytes are copied; truncated reports whether more data was available.
 func (r *run) copy(ctx context.Context, dst io.Writer, src io.Reader, limit int64) (n int64, sums map[string]string, truncated bool, err error) {
-	hs := newHashers(r.cfg.Collect.Hashes)
-	defer func() { sums = hs.sums() }()
+	hs := hashing.New(r.cfg.Collect.Hashes)
+	defer func() { sums = hs.Sums() }()
 	reader := src
 	if limit > 0 {
 		reader = io.LimitReader(src, limit)
@@ -439,7 +435,7 @@ func (r *run) copy(ctx context.Context, dst io.Writer, src io.Reader, limit int6
 			if _, ew := dst.Write(chunk); ew != nil {
 				return n, nil, false, fmt.Errorf("%w: %v", errArchiveWrite, ew)
 			}
-			hs.write(chunk)
+			hs.Write(chunk)
 			n += int64(nr)
 			sinceCheck += int64(nr)
 			r.thr.wait(ctx, nr)
@@ -467,47 +463,6 @@ func (r *run) copy(ctx context.Context, dst io.Writer, src io.Reader, limit int6
 		truncated = k > 0
 	}
 	return n, nil, truncated, nil
-}
-
-type hashers struct {
-	names []string
-	hs    []hash.Hash
-}
-
-func newHashers(names []string) *hashers {
-	h := &hashers{}
-	for _, n := range names {
-		var x hash.Hash
-		switch n {
-		case "md5":
-			x = md5.New()
-		case "sha1":
-			x = sha1.New()
-		case "sha256":
-			x = sha256.New()
-		case "sha512":
-			x = sha512.New()
-		default:
-			continue
-		}
-		h.names = append(h.names, n)
-		h.hs = append(h.hs, x)
-	}
-	return h
-}
-
-func (h *hashers) write(p []byte) {
-	for _, x := range h.hs {
-		x.Write(p)
-	}
-}
-
-func (h *hashers) sums() map[string]string {
-	out := make(map[string]string, len(h.hs))
-	for i, x := range h.hs {
-		out[h.names[i]] = hex.EncodeToString(x.Sum(nil))
-	}
-	return out
 }
 
 func applyMeta(rec *result.FileRecord, m source.Meta) {

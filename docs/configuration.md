@@ -72,6 +72,8 @@ Sizes: integer bytes or a number with unit. `KB/MB/GB/TB` are powers of
 1000, `KiB/MiB/GiB/TiB` and `K/M/G/T` are powers of 1024.
 Durations: integer seconds or `30s`, `90m`, `2h`, `1h30m`.
 
+### Output path
+
 Output placeholders: `{hostname}`, `{timestamp}` (UTC, `20261106T142226Z`) and
 `{job_id}` (`nojob` if unset). If `--output` names a directory, the file name
 pattern of the configuration is kept.
@@ -94,6 +96,11 @@ order (what is collected first is kept when a size or time limit is hit):
 2. `artifacts` (names or wildcards such as `windows.registry.*`),
 3. `custom_artifacts`,
 4. minus `exclude_artifacts`.
+
+On the command line, `--profile`, `--artifact`, `--exclude-artifact`,
+`--path` and `--exclude-path` extend or replace these values (see
+[CLI reference](cli.md)). Without a configuration file, `--artifact` or
+`--path` without `--profile` select only those artifacts and paths.
 
 Only artifacts with a source for the running platform are collected, so one
 configuration can serve Windows, Linux and macOS endpoints. An explicitly
@@ -153,7 +160,7 @@ Variables (case-insensitive):
 
 | Variable | Windows | Linux | macOS |
 |---|---|---|---|
-| `%UserHome%` | every profile from the registry ProfileList (including LocalSystem, LocalService, NetworkService) and every directory below `%SystemDrive%\Users` | `/root`, every directory below `/home`, every existing home in `/etc/passwd` (service accounts such as `www-data` included) | every directory below `/Users`, `/var/root` |
+| `%UserHome%` | every profile from the registry ProfileList (including LocalSystem, LocalService, NetworkService), the 32-bit LocalSystem profile `%SystemRoot%\SysWOW64\config\systemprofile`, and every directory below `%SystemDrive%\Users` | `/root`, every directory below `/home`, every existing home in `/etc/passwd` (service accounts such as `www-data` included) | every directory below `/Users`, `/var/root` |
 | `%SystemDrive%`, `%SystemRoot%`, `%WinDir%`, `%ProgramData%`, `%ProgramFiles%`, `%ProgramFiles(x86)%` | from the environment with sensible fallbacks; `%ProgramFiles(x86)%` expands to nothing on 32-bit Windows | – | – |
 | any other `%NAME%` | environment variable of the collector process (note: under LocalSystem, `%APPDATA%` etc. point to the system profile) | not available | not available |
 

@@ -11,8 +11,9 @@
 #   SMOKE_RAW=true    require the locked SYSTEM hive to be read via raw NTFS
 #
 # Checks: checksum from SHA256SUMS, version stamp, info commands, example
-# configurations, a "minimal" collection (exit code 0 or 1) and the archive
-# it produced (scripts/smoke-check.py).
+# configurations, a dry run of the "full" profile without pattern errors, a
+# "minimal" collection (exit code 0 or 1) and the archive
+# it produced (scripts/smoke-check.py independently, and "relic verify").
 set -euo pipefail
 
 dist="${1:?usage: smoke-test.sh <dist-dir> <platform-suffix>}"
@@ -60,6 +61,28 @@ for f in "$here"/../examples/*.yaml; do
 	"$bin" validate "$f" --os "$os"
 done
 
+# Resolve every pattern of the full catalog (dry run: nothing is read). Any
+# run-level error (pattern or variable error) fails the smoke test.
+dry=0
+"$bin" collect --profile full --dry-run --json -q --max-duration 10m > dryrun.json || dry=$?
+echo "full dry run exit code: $dry"
+if [ "$dry" -gt 1 ]; then
+	head -c 4000 dryrun.json >&2 || true
+	exit 1
+fi
+py="$(command -v python3 || command -v python)"
+"$py" - dryrun.json <<'PY'
+import json, sys
+r = json.load(open(sys.argv[1], encoding="utf-8"))
+errs = r.get("errors") or []
+if errs:
+    print("full dry run reported errors:", *errs, sep="\n  ", file=sys.stderr)
+    sys.exit(1)
+s = r["summary"]
+print(f"full dry run ok: {s['artifacts_selected']} artifacts, {s['files_matched']} files matched, "
+      f"{s['enumeration_errors']} enumeration errors")
+PY
+
 rm -rf smoke-out result.json
 cmd=("$bin" collect --profile minimal --output smoke-out/ --json -q --max-duration 15m)
 code=0
@@ -75,8 +98,10 @@ if [ "$code" -gt 1 ]; then
 	exit 1
 fi
 
-py="$(command -v python3 || command -v python)"
 args=(result.json --exit-code "$code")
 [ -n "${EXPECTED_VERSION:-}" ] && args+=(--expect-version "$EXPECTED_VERSION")
 [ "${SMOKE_RAW:-}" = true ] && args+=(--require-raw-hive)
 "$py" "$here/smoke-check.py" "${args[@]}"
+
+archive="$("$py" -c 'import json,sys; print(json.load(open(sys.argv[1]))["output"]["path"])' result.json)"
+"$bin" verify "$archive" --result result.json

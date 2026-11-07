@@ -147,9 +147,11 @@ func newListCmd(stdout io.Writer) *cobra.Command {
 		Short: "List built-in artifacts or profiles",
 	}
 	var (
-		asJSON  bool
-		goos    string
-		profile string
+		asJSON   bool
+		goos     string
+		profile  string
+		search   string
+		category string
 	)
 	arts := &cobra.Command{
 		Use:   "artifacts",
@@ -184,11 +186,18 @@ func newListCmd(stdout io.Writer) *cobra.Command {
 				Description string   `json:"description"`
 			}
 			rows := []row{}
+			terms := strings.Fields(strings.ToLower(search))
 			for _, a := range cat.Artifacts {
 				if filter != nil && !filter[a.Name] {
 					continue
 				}
 				if goos != "" && goos != "all" && !a.AppliesTo(goos) {
+					continue
+				}
+				if category != "" && !strings.EqualFold(a.Category, category) {
+					continue
+				}
+				if !matchesSearch(a, terms) {
 					continue
 				}
 				rows = append(rows, row{a.Name, a.Category, artifactOS(a), member[a.Name], a.Description})
@@ -211,6 +220,8 @@ func newListCmd(stdout io.Writer) *cobra.Command {
 	arts.Flags().BoolVar(&asJSON, "json", false, "print as JSON")
 	arts.Flags().StringVar(&goos, "os", "", "only artifacts for this platform (windows, linux, darwin)")
 	arts.Flags().StringVar(&profile, "profile", "", "only artifacts of this profile")
+	arts.Flags().StringVarP(&search, "search", "s", "", "only artifacts whose name, category, description or paths contain all of these words")
+	arts.Flags().StringVar(&category, "category", "", "only artifacts of this category (e.g. persistence, execution, logs)")
 
 	var profJSON bool
 	profs := &cobra.Command{
@@ -250,6 +261,28 @@ func newListCmd(stdout io.Writer) *cobra.Command {
 	profs.Flags().BoolVar(&profJSON, "json", false, "print as JSON")
 	cmd.AddCommand(arts, profs)
 	return cmd
+}
+
+// matchesSearch reports whether every term occurs in the artifact's name,
+// category, description or path patterns (case-insensitive).
+func matchesSearch(a *config.Artifact, terms []string) bool {
+	if len(terms) == 0 {
+		return true
+	}
+	var b strings.Builder
+	b.WriteString(a.Name + "\n" + a.Category + "\n" + a.Description)
+	for _, s := range a.Sources {
+		for _, p := range s.Paths {
+			b.WriteString("\n" + p)
+		}
+	}
+	text := strings.ToLower(b.String())
+	for _, t := range terms {
+		if !strings.Contains(text, t) {
+			return false
+		}
+	}
+	return true
 }
 
 func newShowCmd(stdout io.Writer) *cobra.Command {

@@ -145,3 +145,24 @@ Not adopted:
 6. **Parallel compression** for faster large collections. The current
    pipeline is single-threaded on purpose to keep the endpoint load low.
 7. **Import of ForensicArtifacts/KAPE target definitions** into the catalog.
+8. **Catalog engine features** found while extending the catalog (2026-11):
+   - A per-source `max_file_size` (UAC caps `/tmp` at 10 MiB per file). It
+     would let `standard` include staging folders, web roots and WER/SYSVOL
+     without risking multi-GB files.
+   - An `opt_in` artifact flag that `*` and profiles never select, for
+     NTDS.dit, memory files, mailboxes, quarantined malware and credential
+     stores (rclone/ngrok configs, keychains, cloud CLI credentials).
+   - Deduplication by file identity (device and inode) instead of path:
+     symlinked aliases such as merged `/usr` or `/var/run` are otherwise
+     collected twice.
+   - Sparse-aware reads (SEEK_DATA/SEEK_HOLE) for `/var/log/lastlog`, whose
+     apparent size is hundreds of GB on hosts with directory-service UIDs.
+   - Recording inode flags (immutable, append-only) and capabilities, and a
+     metadata-only source (hash and times without content) for credential
+     files.
+   - A process source (command lines, executables hashed once per file,
+     deleted binaries, socket owners); `/proc` per-process files are not
+     collected as files because processes exit during the collection.
+   - Registry-driven paths on Windows (transcript output directory,
+     relocated event logs, Exchange and SQL Server install paths) and
+     environment variables that may be missing without failing the run.

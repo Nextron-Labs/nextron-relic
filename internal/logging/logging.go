@@ -38,6 +38,21 @@ func NewConsole(w io.Writer, format string, level slog.Level) (*slog.Logger, err
 	return nil, fmt.Errorf("invalid log format %q (text, json)", format)
 }
 
+// NewFileHandler returns a JSON lines handler for log files (the archive's
+// relic.log and --log-file). Timestamps are written in UTC, like all other
+// timestamps in the archive and the result.
+func NewFileHandler(w io.Writer, level slog.Leveler) slog.Handler {
+	return slog.NewJSONHandler(w, &slog.HandlerOptions{
+		Level: level,
+		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+			if len(groups) == 0 && a.Key == slog.TimeKey && a.Value.Kind() == slog.KindTime {
+				a.Value = slog.TimeValue(a.Value.Time().UTC())
+			}
+			return a
+		},
+	})
+}
+
 // Tee returns a logger that writes to l and additionally to h.
 func Tee(l *slog.Logger, h slog.Handler) *slog.Logger {
 	return slog.New(multi{l.Handler(), h})

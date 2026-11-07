@@ -21,6 +21,7 @@ profiles:
       - linux.persistence.cron
       - linux.persistence.systemd
       - linux.persistence.init
+      - linux.persistence.package_hooks
       - linux.system_info
       # Linux and macOS
       - unix.shell_history
@@ -31,7 +32,7 @@ profiles:
       - macos.logs
 
   - name: standard
-    description: Default incident response triage. Adds file system metadata (NTFS $MFT, $LogFile, $UsnJrnl), SRUM, WMI, user activity, browsers, full /var/log and macOS unified logs.
+    description: Default incident response triage. Adds file system metadata (NTFS $MFT, $LogFile, $UsnJrnl), SRUM, WMI, user activity, browsers, RMM/AV/server logs, more persistence locations, full /var/log, systemd journal and macOS unified logs.
     include: [minimal]
     artifacts:
       - windows.ntfs.mft
@@ -54,12 +55,73 @@ profiles:
       - windows.defender
       - windows.ssh
       - windows.remote_access_tools
+      - windows.rmm.*
+      - windows.av.*
+      - windows.powershell.transcripts
+      - windows.powershell.profiles
+      - windows.wer
+      - windows.cryptnet_url_cache
+      - windows.lateral.impacket
+      - windows.appcompat.custom_shims
+      - windows.office.persistence
+      - windows.rdp_client_files
+      - windows.vpn_clients
+      - windows.network_scanners
+      - windows.capability_access
+      - windows.startupinfo
+      - windows.logs.debug
+      - windows.notepad
+      - windows.ad.sysvol
+      - windows.iis.config
+      - windows.exchange.webshells
+      - windows.mssql.errorlog
+      - windows.dhcp_server
+      - windows.backup.veeam
+      - windows.web.tomcat
+      - linux.live.kernel
       - linux.accounts.shadow
-      - linux.logs.var_log
-      - linux.packages
+      - linux.persistence.pam_modules
+      - linux.persistence.boot
+      - linux.persistence.network_hooks
+      - linux.persistence.dbus_polkit
+      - linux.persistence.python_hooks
+      - linux.persistence.systemd_vendor
+      - linux.security_config
+      - linux.cloud_agents
+      - linux.containers.config
       - linux.web_server_config
+      - linux.web.app_config
+      - linux.network_config
+      - linux.directory_services
+      - linux.remote_access_tools
+      - linux.desktop.user_activity
+      - linux.mail.spool
+      - linux.logs.var_log
+      - linux.logs.apps
+      - linux.appliance.vcenter
+      - linux.packages
+      - linux.packages.dpkg_info
+      - linux.locate_db
       - unix.shell_config
       - macos.accounts
+      - macos.gatekeeper
+      - macos.xprotect
+      - macos.persistence.auth
+      - macos.persistence.user_apps
+      - macos.persistence.plugins
+      - macos.privileged_helpers
+      - macos.extensions
+      - macos.managed_config
+      - macos.login_records
+      - macos.terminal_state
+      - macos.coreanalytics
+      - macos.network_usage
+      - macos.remote_access_tools
+      - macos.biome
+      - macos.spotlight_shortcuts
+      - macos.devices
+      - macos.app_inventory
+      - macos.preferences
       - macos.unified_logs
       - macos.fsevents
       - macos.quarantine_events
@@ -68,9 +130,11 @@ profiles:
       - macos.install_history
       - macos.recent_items
       - browser.*
+      # Large logs last, so that a size or time limit cuts them first.
+      - linux.logs.journal
 
   - name: full
-    description: Every built-in artifact for the platform, including large ones (systemd journal, RPM database, IIS logs, thumbnail and RDP caches, all application logs).
+    description: Every built-in artifact for the platform, including large ones (systemd journal, RPM database, IIS and Exchange logs, ETL traces, staging folders, Windows.old, thumbnail and RDP caches, all Biome streams, PowerLog, all application logs).
     include: [standard]
     artifacts:
       - '*'

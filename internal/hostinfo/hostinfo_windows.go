@@ -75,7 +75,12 @@ func UserHomes() []string {
 		}
 		k.Close()
 	}
-	usersDir := env("SystemDrive", "C:") + `\Users`
+	// 32-bit processes running as LocalSystem (many RMM agents and their
+	// children) use the SysWOW64 copy of the system profile, which is not
+	// listed in ProfileList. Kept only if it exists.
+	sysDrive := env("SystemDrive", "C:")
+	cands = append(cands, env("SystemRoot", sysDrive+`\Windows`)+`\SysWOW64\config\systemprofile`)
+	usersDir := sysDrive + `\Users`
 	if entries, err := os.ReadDir(usersDir); err == nil {
 		for _, e := range entries {
 			// Junctions such as "All Users" and "Default User" are skipped.

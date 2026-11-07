@@ -71,13 +71,15 @@ artifacts:
 
   - name: windows.scheduled_tasks
     category: persistence
-    description: Scheduled task definitions (XML and legacy .job) and the task scheduler log.
+    description: Scheduled task definitions (XML and legacy .job), PowerShell scheduled jobs and the task scheduler log.
     sources:
       - os: [windows]
         paths:
           - '%SystemRoot%\System32\Tasks\**'
+          - '%SystemRoot%\SysWOW64\Tasks\**'
           - '%SystemRoot%\Tasks\**'
           - '%SystemRoot%\SchedLgU.Txt'
+          - '%UserHome%\AppData\Local\Microsoft\Windows\PowerShell\ScheduledJobs\**'
 
   - name: windows.startup_folders
     category: persistence
@@ -98,12 +100,14 @@ artifacts:
 
   - name: windows.group_policy
     category: persistence
-    description: Local Group Policy files including logon/startup scripts.
+    description: Local Group Policy files including logon/startup scripts, and the cache of applied domain Group Policy Preferences (scheduled tasks, files, services pushed by GPO).
     sources:
       - os: [windows]
         paths:
           - '%SystemRoot%\System32\GroupPolicy\**'
           - '%SystemRoot%\System32\GroupPolicyUsers\**'
+          - '%ProgramData%\Microsoft\Group Policy\History\**'
+          - '%UserHome%\AppData\Local\Microsoft\Group Policy\History\**'
 
   - name: windows.powershell_history
     category: execution
@@ -115,12 +119,15 @@ artifacts:
 
   - name: windows.recent_files
     category: user_activity
-    description: LNK files and jump lists (AutomaticDestinations, CustomDestinations) and Office recent files.
+    description: LNK files and jump lists (AutomaticDestinations, CustomDestinations), Office recent files, Desktop and Start Menu shortcuts.
     sources:
       - os: [windows]
         paths:
           - '%UserHome%\AppData\Roaming\Microsoft\Windows\Recent\**'
           - '%UserHome%\AppData\Roaming\Microsoft\Office\Recent\*'
+          - '%UserHome%\Desktop\*.lnk'
+          - '%UserHome%\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\**\*.lnk'
+          - '%ProgramData%\Microsoft\Windows\Start Menu\Programs\**\*.lnk'
 
   - name: windows.activities_cache
     category: user_activity
@@ -218,11 +225,11 @@ artifacts:
 
   - name: windows.firewall_logs
     category: network
-    description: Windows Firewall logs.
+    description: Windows Firewall logs including the rotated previous log.
     sources:
       - os: [windows]
         paths:
-          - '%SystemRoot%\System32\LogFiles\Firewall\*.log'
+          - '%SystemRoot%\System32\LogFiles\Firewall\*.log*'
 
   - name: windows.bits
     category: network
@@ -241,13 +248,17 @@ artifacts:
           - '%SystemRoot%\System32\LogFiles\Sum\*'
 
   - name: windows.defender
-    category: logs
-    description: Microsoft Defender support logs (MPLog) and detection history.
+    category: security
+    description: Microsoft Defender support logs (MPLog), MpCmdRun log (signature removal, downloads), detection history and quarantine metadata (not the quarantined files).
     sources:
       - os: [windows]
         paths:
           - '%ProgramData%\Microsoft\Windows Defender\Support\*.log'
           - '%ProgramData%\Microsoft\Windows Defender\Scans\History\Service\DetectionHistory\**'
+          - '%ProgramData%\Microsoft\Windows Defender\Quarantine\Entries\*'
+          - '%ProgramData%\Microsoft\Microsoft AntiMalware\Support\*.log'
+          - '%SystemRoot%\Temp\MpCmdRun.log'
+          - '%UserHome%\AppData\Local\Temp\MpCmdRun.log'
 
   - name: windows.ssh
     category: remote_access
@@ -261,15 +272,27 @@ artifacts:
 
   - name: windows.remote_access_tools
     category: remote_access
-    description: Logs and connection traces of common remote administration tools (AnyDesk, TeamViewer).
+    description: AnyDesk and TeamViewer logs, incoming connection and file transfer records, chat logs and configuration (not AnyDesk's service.conf, which holds the password hash and private key).
+    references:
+      - https://www.synacktiv.com/publications/legitimate-rats-a-comprehensive-forensic-analysis-of-the-usual-suspects
     sources:
       - os: [windows]
         paths:
-          - '%ProgramData%\AnyDesk\*.{trace,conf}'
-          - '%UserHome%\AppData\Roaming\AnyDesk\*.{trace,conf}'
+          - '%ProgramData%\AnyDesk\*.{trace,conf,txt}'
+          - '%ProgramData%\AnyDesk\ad_*\*.{trace,conf,txt}'
+          - '%UserHome%\AppData\Roaming\AnyDesk\*.{trace,conf,txt}'
+          - '%UserHome%\AppData\Roaming\AnyDesk\ad_*\*.{trace,conf,txt}'
+          - '%UserHome%\AppData\Roaming\AnyDesk\chat\*.txt'
           - '%ProgramFiles%\TeamViewer\*.log'
+          - '%ProgramFiles%\TeamViewer\Connections*.txt'
           - '%ProgramFiles(x86)%\TeamViewer\*.log'
+          - '%ProgramFiles(x86)%\TeamViewer\Connections*.txt'
           - '%UserHome%\AppData\Roaming\TeamViewer\*.{txt,log}'
+          - '%UserHome%\AppData\Local\TeamViewer\Database\tvchatfilecache.db'
+          - '%UserHome%\AppData\Local\TeamViewer\RemotePrinting\tvprint.db'
+        exclude:
+          - '%ProgramData%\AnyDesk\**\service.conf'
+          - '%UserHome%\AppData\Roaming\AnyDesk\**\service.conf'
 
   - name: windows.rdp_bitmap_cache
     category: remote_access
@@ -294,3 +317,591 @@ artifacts:
       - os: [windows]
         paths:
           - '%SystemDrive%\inetpub\logs\LogFiles\**'
+          - '%SystemRoot%\System32\LogFiles\W3SVC*\*.log'
+
+  # --- Remote monitoring and management (RMM) and remote access tools. Each
+  # costs only a few directory lookups when the tool is absent. Paths follow
+  # the KAPE targets (github.com/EricZimmerman/KapeFiles, Targets/Apps).
+
+  - name: windows.rmm.screenconnect
+    category: remote_access
+    description: ConnectWise ScreenConnect client command and file transfer traces and configuration; on a ScreenConnect server the session database, user and role definitions (with password hashes), web.config and App_Extensions (webshells).
+    references:
+      - https://docs.velociraptor.app/exchange/artifacts/pages/screenconnect/
+    sources:
+      - os: [windows]
+        paths:
+          - '%SystemRoot%\Temp\ScreenConnect\**'
+          - '%UserHome%\Documents\ConnectWiseControl\Temp\**'
+          - '%ProgramData%\ScreenConnect Client*\user.config'
+          - '%ProgramFiles%\ScreenConnect Client (*)\*.config'
+          - '%ProgramFiles(x86)%\ScreenConnect Client (*)\*.config'
+          - '%ProgramFiles%\ScreenConnect\App_Data\{Session.db*,*.xml}'
+          - '%ProgramFiles(x86)%\ScreenConnect\App_Data\{Session.db*,*.xml}'
+          - '%ProgramFiles%\ScreenConnect\App_Extensions\**\*.{aspx,ashx}'
+          - '%ProgramFiles(x86)%\ScreenConnect\App_Extensions\**\*.{aspx,ashx}'
+          - '%ProgramFiles%\ScreenConnect\web.config'
+          - '%ProgramFiles(x86)%\ScreenConnect\web.config'
+
+  - name: windows.rmm.splashtop
+    category: remote_access
+    description: Splashtop Streamer and gateway logs (sessions with client IP, file transfers, chat). Also used by Atera remote access.
+    sources:
+      - os: [windows]
+        paths:
+          - '%ProgramFiles%\Splashtop\Splashtop Remote\Server\log\*'
+          - '%ProgramFiles(x86)%\Splashtop\Splashtop Remote\Server\log\*'
+          - '%ProgramData%\Splashtop\Temp\log\*'
+          - '%ProgramFiles(x86)%\Splashtop\Splashtop Remote\Splashtop Gateway\log\**'
+          - '%ProgramData%\Splashtop\Splashtop Remote Client for ST*\*\log\**'
+
+  - name: windows.rmm.atera
+    category: remote_access
+    description: Atera agent package logs and configuration (remote commands and their output).
+    sources:
+      - os: [windows]
+        paths:
+          - '%ProgramFiles%\ATERA Networks\AteraAgent\**\*.{txt,log,ini,config,cfg}'
+          - '%ProgramFiles(x86)%\ATERA Networks\AteraAgent\**\*.{txt,log,ini,config,cfg}'
+
+  - name: windows.rmm.ninjaone
+    category: remote_access
+    description: NinjaOne (NinjaRMM) agent logs.
+    sources:
+      - os: [windows]
+        paths:
+          - '%ProgramData%\NinjaRMMAgent\*.txt'
+          - '%ProgramData%\NinjaRMMAgent\logs\*'
+
+  - name: windows.rmm.datto
+    category: remote_access
+    description: Datto RMM (CentraStage) agent and service logs.
+    sources:
+      - os: [windows]
+        paths:
+          - '%ProgramData%\CentraStage\AEMAgent\DataLog\**'
+          - '%ProgramData%\CentraStage\Logs\*'
+          - '%ProgramFiles%\CentraStage\log.txt'
+          - '%ProgramFiles(x86)%\CentraStage\log.txt'
+          - '%ProgramFiles(x86)%\CentraStage\archives\*'
+
+  - name: windows.rmm.nable
+    category: remote_access
+    description: N-able (N-central) Windows agent logs and configuration.
+    sources:
+      - os: [windows]
+        paths:
+          - '%ProgramFiles(x86)%\N-Able Technologies\Windows Agent\{log,config}\*'
+
+  - name: windows.rmm.kaseya
+    category: remote_access
+    description: Kaseya VSA agent logs, Live Connect logs, setup logs and scripts in the agent working directory.
+    sources:
+      - os: [windows]
+        paths:
+          - '%ProgramData%\Kaseya\Log\**'
+          - '%ProgramFiles%\Kaseya\*\agentmon.log*'
+          - '%ProgramFiles(x86)%\Kaseya\*\agentmon.log*'
+          - '%UserHome%\AppData\Local\Kaseya\Log\KaseyaLiveConnect\**'
+          - '%SystemRoot%\Temp\KASetup.log'
+          - '%UserHome%\AppData\Local\Temp\KASetup.log'
+          - '%SystemDrive%\kworking\**\*.{log,txt,bat,cmd,ps1,vbs,crt}'
+
+  - name: windows.rmm.action1
+    category: remote_access
+    description: Action1 agent logs, scripts and rule data.
+    sources:
+      - os: [windows]
+        paths:
+          - '%SystemRoot%\Action1\logs\*.log'
+          - '%SystemRoot%\Action1\{scripts,rule_data}\**'
+
+  - name: windows.rmm.meshagent
+    category: remote_access
+    description: MeshCentral agent logs and settings, Tactical RMM agent log.
+    sources:
+      - os: [windows]
+        paths:
+          - '%ProgramFiles%\Mesh Agent\**\*.{log,msh}'
+          - '%ProgramFiles%\TacticalAgent\agent.log'
+
+  - name: windows.rmm.level
+    category: remote_access
+    description: Level RMM agent logs.
+    sources:
+      - os: [windows]
+        paths:
+          - '%ProgramFiles%\Level\*.log'
+
+  - name: windows.rmm.immybot
+    category: remote_access
+    description: ImmyBot agent logs, scripts and configuration.
+    sources:
+      - os: [windows]
+        paths:
+          - '%ProgramData%\ImmyBot\{Logs,Scripts}\**'
+          - '%ProgramData%\ImmyBotAgentService\config.json'
+          - '%SystemRoot%\Temp\ImmyBot\**'
+
+  - name: windows.rmm.rustdesk
+    category: remote_access
+    description: RustDesk logs (client and service; not the configuration, which holds the access password).
+    sources:
+      - os: [windows]
+        paths:
+          - '%UserHome%\AppData\Roaming\RustDesk\log\**'
+
+  - name: windows.rmm.quick_assist
+    category: remote_access
+    description: Quick Assist and Remote Help embedded browser history and preferences (help desk impersonation lures).
+    references:
+      - https://hackuponthegale.github.io/blog/dfir/QuickAssist1
+    sources:
+      - os: [windows]
+        paths:
+          - '%UserHome%\AppData\Local\Temp\{QuickAssist,RemoteHelp}\EBWebView\Default\{History,History-journal,Preferences,Secure Preferences,Network Action Predictor}'
+          - '%UserHome%\AppData\Local\Temp\{QuickAssist,RemoteHelp}\EBWebView\Default\Network\DIPS*'
+
+  - name: windows.rmm.simplehelp
+    category: remote_access
+    description: SimpleHelp remote access and technician logs.
+    sources:
+      - os: [windows]
+        paths:
+          - '%ProgramData%\JWrapper-Remote Access\logs\*'
+          - '%ProgramData%\SimpleHelp\logs\*'
+          - '%UserHome%\AppData\Roaming\JWrapper-SimpleHelp Technician\logs\*'
+
+  - name: windows.rmm.logmein
+    category: remote_access
+    description: LogMeIn host logs.
+    sources:
+      - os: [windows]
+        paths:
+          - '%ProgramData%\LogMeIn\Logs\**'
+          - '%UserHome%\AppData\Local\Temp\LogMeInLogs\**'
+
+  - name: windows.rmm.zoho_assist
+    category: remote_access
+    description: Zoho Assist logs and configuration.
+    sources:
+      - os: [windows]
+        paths:
+          - '%ProgramData%\ZohoMeeting\log\**'
+          - '%ProgramData%\ZohoMeeting\*.conf'
+          - '%UserHome%\AppData\Local\ZohoMeeting\log\**'
+          - '%ProgramFiles%\ZohoMeeting\UnAttended\ZohoMeeting\logs\**'
+          - '%ProgramFiles(x86)%\ZohoMeeting\UnAttended\ZohoMeeting\logs\**'
+
+  - name: windows.rmm.ultraviewer
+    category: remote_access
+    description: UltraViewer connection and service logs.
+    sources:
+      - os: [windows]
+        paths:
+          - '%UserHome%\AppData\Roaming\UltraViewer\**\*.{log,txt}'
+          - '%ProgramFiles(x86)%\UltraViewer\{UltraViewerService_log.txt,ConnectionLog.Log}'
+
+  - name: windows.rmm.other
+    category: remote_access
+    description: Logs of further remote access tools (Supremo, Radmin, Remote Utilities, RealVNC, TightVNC, GoTo, DWAgent).
+    sources:
+      - os: [windows]
+        paths:
+          - '%ProgramData%\SupremoRemoteDesktop\Log\*.log'
+          - '%SystemRoot%\System32\rserver30\Radm_log.htm'
+          - '%SystemRoot%\SysWOW64\rserver30\Radm_log.htm'
+          - '%SystemRoot%\System32\rserver30\CHATLOGS\*\*.htm'
+          - '%SystemRoot%\SysWOW64\rserver30\CHATLOGS\*\*.htm'
+          - '%ProgramData%\Remote Utilities\Logs\rut_log_*.html'
+          - '%ProgramFiles(x86)%\Remote Utilities - Host\Logs\rut_log_*.html'
+          - '%ProgramData%\RealVNC-Service\vncserver.log'
+          - '%UserHome%\AppData\Local\RealVNC\{vncserver,vncviewer}.log'
+          - '%ProgramData%\TightVNC\Server\Logs\*'
+          - '%UserHome%\AppData\Roaming\GoTo\Logs\goto.log'
+          - '%ProgramData%\DWAgent*\*.log*'
+
+  # --- Third-party antivirus and EDR logs (KAPE Targets/Antivirus). Early
+  # detections often precede encryption by days; the logs also show tampering.
+
+  - name: windows.av.sophos
+    category: security
+    description: Sophos endpoint logs.
+    sources:
+      - os: [windows]
+        paths:
+          - '%ProgramData%\Sophos\*\Logs\**'
+          - '%ProgramData%\Sophos\Logs\**'
+
+  - name: windows.av.symantec
+    category: security
+    description: Symantec Endpoint Protection logs and registration information.
+    sources:
+      - os: [windows]
+        paths:
+          - '%ProgramData%\Symantec\Symantec Endpoint Protection\*\Data\Logs\**'
+          - '%ProgramData%\Symantec\Symantec Endpoint Protection\*\Data\registrationInfo.xml'
+          - '%UserHome%\AppData\Local\Symantec\Symantec Endpoint Protection\Logs\**'
+
+  - name: windows.av.trellix
+    category: security
+    description: Trellix / McAfee Endpoint Security, VirusScan and agent logs.
+    sources:
+      - os: [windows]
+        paths:
+          - '%ProgramData%\McAfee\Endpoint Security\{Logs,Logs_Old}\**'
+          - '%ProgramData%\McAfee\{DesktopProtection,VirusScan}\**'
+          - '%ProgramData%\McAfee\Agent\{logs,AgentEvents}\**'
+
+  - name: windows.av.eset
+    category: security
+    description: ESET endpoint and management agent logs.
+    sources:
+      - os: [windows]
+        paths:
+          - '%ProgramData%\ESET\{ESET Security,ESET NOD32 Antivirus}\Logs\**'
+          - '%ProgramData%\ESET\RemoteAdministrator\Agent\EraAgentApplicationData\Logs\*'
+
+  - name: windows.av.bitdefender
+    category: security
+    description: Bitdefender endpoint logs.
+    sources:
+      - os: [windows]
+        paths:
+          - '%ProgramData%\Bitdefender\Endpoint Security\Logs\**'
+          - '%ProgramData%\Bitdefender\Desktop\Profiles\Logs\**'
+
+  - name: windows.av.trendmicro
+    category: security
+    description: Trend Micro Security Agent reports and connection logs.
+    sources:
+      - os: [windows]
+        paths:
+          - '%ProgramFiles%\Trend Micro\Security Agent\{Report,ConnLog}\*.log'
+          - '%ProgramFiles(x86)%\Trend Micro\Security Agent\{Report,ConnLog}\*.log'
+
+  - name: windows.av.malwarebytes
+    category: security
+    description: Malwarebytes service logs and scan results.
+    sources:
+      - os: [windows]
+        paths:
+          - '%ProgramData%\Malwarebytes\MBAMService\logs\mbamservice.log*'
+          - '%ProgramData%\Malwarebytes\MBAMService\ScanResults\**'
+          - '%ProgramData%\Malwarebytes\Malwarebytes Anti-Malware\Logs\mbam-log-*.xml'
+
+  - name: windows.av.kaspersky
+    category: security
+    description: Kaspersky Endpoint Security trace logs (only present when tracing is enabled; detections are in the Kaspersky event log).
+    sources:
+      - os: [windows]
+        paths:
+          - '%ProgramData%\Kaspersky Lab\KES*\Traces\*.log'
+
+  # --- Execution, persistence and user activity
+
+  - name: windows.powershell.transcripts
+    category: execution
+    description: PowerShell transcripts in the default locations (Start-Transcript and Group Policy transcription without an output directory) and unsaved PowerShell ISE scripts.
+    sources:
+      - os: [windows]
+        paths:
+          - '%UserHome%\Documents\PowerShell_transcript.*.txt'
+          - '%UserHome%\Documents\20[0-9][0-9][01][0-9][0-3][0-9]\PowerShell_transcript.*.txt'
+          - '%UserHome%\AppData\Local\Microsoft_Corporation\powershell_ise.exe_StrongName*\*\AutoSaveFiles\*.ps1'
+
+  - name: windows.powershell.profiles
+    category: persistence
+    description: PowerShell profile scripts of Windows PowerShell and PowerShell 7 (machine and user).
+    sources:
+      - os: [windows]
+        paths:
+          - '%SystemRoot%\System32\WindowsPowerShell\v1.0\*profile.ps1'
+          - '%SystemRoot%\SysWOW64\WindowsPowerShell\v1.0\*profile.ps1'
+          - '%UserHome%\Documents\{WindowsPowerShell,PowerShell}\*profile.ps1'
+          - '%ProgramFiles%\PowerShell\7\{*profile.ps1,powershell.config.json}'
+
+  - name: windows.wer
+    category: logs
+    description: Windows Error Reporting reports (crash time, faulting module and process path; exploitation and crashing malware). Memory dumps are not collected.
+    sources:
+      - os: [windows]
+        paths:
+          - '%ProgramData%\Microsoft\Windows\WER\**\*.{wer,xml,txt,csv}'
+          - '%UserHome%\AppData\Local\Microsoft\Windows\WER\**\*.{wer,xml,txt,csv}'
+
+  - name: windows.cryptnet_url_cache
+    category: network
+    description: CryptnetUrlCache metadata (URL, time and size of files downloaded through CryptoAPI, e.g. certutil -urlcache).
+    sources:
+      - os: [windows]
+        paths:
+          - '%UserHome%\AppData\LocalLow\Microsoft\CryptnetUrlCache\MetaData\*'
+
+  - name: windows.notepad
+    category: user_activity
+    description: Windows 11 Notepad tab and window state (unsaved text) and Notepad++ session and backups. May contain arbitrary user text.
+    sources:
+      - os: [windows]
+        paths:
+          - '%UserHome%\AppData\Local\Packages\Microsoft.WindowsNotepad_8wekyb3d8bbwe\LocalState\{TabState,WindowState}\*.bin'
+          - '%UserHome%\AppData\Roaming\Notepad++\backup\**'
+          - '%UserHome%\AppData\Roaming\Notepad++\{session.xml,config.xml}'
+
+  - name: windows.lateral.impacket
+    category: execution
+    description: Output and batch files left by Impacket smbexec, wmiexec and dcomexec (lateral movement).
+    references:
+      - https://github.com/fortra/impacket/tree/master/examples
+    sources:
+      - os: [windows]
+        paths:
+          - '%SystemDrive%\__output*'
+          - '%SystemRoot%\__[0-9]*'
+          - '%SystemRoot%\[a-zA-Z][a-zA-Z][a-zA-Z][a-zA-Z][a-zA-Z][a-zA-Z][a-zA-Z][a-zA-Z].bat'
+
+  - name: windows.appcompat.custom_shims
+    category: persistence
+    description: Custom application compatibility shim databases (shim persistence).
+    sources:
+      - os: [windows]
+        paths:
+          - '%SystemRoot%\AppPatch\Custom\**\*.sdb'
+          - '%SystemRoot%\AppPatch\CustomSDB\*'
+          - '%SystemRoot%\AppPatch\AppPatch64\Custom\*'
+
+  - name: windows.office.persistence
+    category: persistence
+    description: Office startup folders, add-ins, the Normal template and Outlook VBA project (Office persistence).
+    sources:
+      - os: [windows]
+        paths:
+          - '%UserHome%\AppData\Roaming\Microsoft\{Word\STARTUP,Excel\XLSTART,AddIns}\*'
+          - '%UserHome%\AppData\Roaming\Microsoft\Templates\Normal.dotm'
+          - '%UserHome%\AppData\Roaming\Microsoft\Outlook\VbaProject.OTM'
+
+  - name: windows.rdp_client_files
+    category: remote_access
+    description: Outgoing RDP connection files (Default.rdp holds the last target) and Remote Desktop Manager connection log (not the credential-bearing .rdg files).
+    sources:
+      - os: [windows]
+        paths:
+          - '%UserHome%\Documents\*.rdp'
+          - '%UserHome%\AppData\Local\Microsoft\Remote Desktop Connection Manager\*.settings'
+          - '%UserHome%\AppData\Local\Devolutions\RemoteDesktopManager\Connections.log'
+
+  - name: windows.vpn_clients
+    category: network
+    description: VPN client logs (FortiClient, GlobalProtect, Ivanti/Pulse Secure, OpenVPN); no configuration files, which can embed keys.
+    sources:
+      - os: [windows]
+        paths:
+          - '%ProgramFiles%\Fortinet\FortiClient\logs\trace\**'
+          - '%UserHome%\AppData\Local\FortiClient\logs\trace\**'
+          - '%ProgramFiles%\Palo Alto Networks\GlobalProtect\*.log*'
+          - '%UserHome%\AppData\Local\Palo Alto Networks\GlobalProtect\PanGP*.log*'
+          - '%ProgramData%\Pulse Secure\Logging\**'
+          - '%ProgramFiles(x86)%\Pulse Secure\Logging\**'
+          - '%UserHome%\OpenVPN\log\*.log'
+
+  - name: windows.network_scanners
+    category: execution
+    description: Advanced IP Scanner and Advanced Port Scanner remnants (discovery phase).
+    sources:
+      - os: [windows]
+        paths:
+          - '%UserHome%\AppData\Local\Temp\{Advanced IP Scanner 2,Advanced Port Scanner 2}\*.bin'
+          - '%SystemRoot%\Temp\{Advanced IP Scanner 2,Advanced Port Scanner 2}\*.bin'
+          - '%UserHome%\advanced_{ip,port}_scanner_*.bin'
+
+  - name: windows.capability_access
+    category: user_activity
+    description: Capability Access Manager database (per-application microphone, camera and location use; Windows 11).
+    sources:
+      - os: [windows]
+        paths:
+          - '%ProgramData%\Microsoft\Windows\CapabilityAccessManager\CapabilityAccessManager.db*'
+
+  - name: windows.startupinfo
+    category: execution
+    description: StartupInfo XML files (processes started shortly after logon, with command lines).
+    sources:
+      - os: [windows]
+        paths:
+          - '%SystemRoot%\System32\WDI\LogFiles\StartupInfo\*.xml'
+
+  - name: windows.logs.debug
+    category: logs
+    description: Logs below %SystemRoot%\debug (netlogon.log for Zerologon and secure channel failures, NetSetup.LOG for domain joins, MSRT log).
+    sources:
+      - os: [windows]
+        paths:
+          - '%SystemRoot%\debug\*.log'
+          - '%SystemRoot%\debug\netlogon.bak'
+
+  # --- Server roles
+
+  - name: windows.ad.sysvol
+    category: persistence
+    description: Domain controller SYSVOL policies and NETLOGON scripts (GPO-based ransomware deployment, logon scripts, Group Policy Preferences). Binaries in NETLOGON are not collected; they are listed in $MFT.
+    sources:
+      - os: [windows]
+        paths:
+          - '%SystemRoot%\SYSVOL\domain\Policies\**\*.{xml,ini,inf,pol,aas,cmt,ps1,psm1,bat,cmd,vbs,js,kix}'
+          - '%SystemRoot%\SYSVOL\domain\scripts\**\*.{ps1,psm1,bat,cmd,vbs,vbe,js,jse,wsf,hta,kix,ini,xml,txt}'
+
+  - name: windows.iis.config
+    category: server
+    description: IIS configuration (modules and handlers, IIS backdoors; application pool passwords are stored encrypted), automatic configuration history snapshots, web.config files and HTTP.sys error logs.
+    sources:
+      - os: [windows]
+        paths:
+          - '%SystemRoot%\System32\inetsrv\config\{applicationHost.config,administration.config,redirection.config}'
+          - '%SystemDrive%\inetpub\history\CFGHISTORY_*\*.config'
+          - '%SystemDrive%\inetpub\wwwroot\**\web.config'
+          - '%SystemRoot%\System32\LogFiles\HTTPERR\*.log'
+
+  - name: windows.exchange.webshells
+    category: server
+    description: Script files in the Exchange webshell locations (owa/auth, ecp/auth, aspnet_client) and the Exchange setup log.
+    references:
+      - https://www.microsoft.com/security/blog/2021/03/02/hafnium-targeting-exchange-servers/
+    sources:
+      - os: [windows]
+        paths:
+          - '%ProgramFiles%\Microsoft\Exchange Server\V15\FrontEnd\HttpProxy\{owa,ecp}\auth\**\*.{aspx,ashx,asmx}'
+          - '%SystemDrive%\inetpub\wwwroot\aspnet_client\**\*.{aspx,ashx,asmx}'
+          - '%SystemDrive%\ExchangeSetupLogs\ExchangeSetup.log'
+
+  - name: windows.exchange.logs
+    category: server
+    description: Exchange HttpProxy, ECP, OAB generator and transport logs (ProxyLogon/ProxyShell investigations). Often several GB.
+    sources:
+      - os: [windows]
+        paths:
+          - '%ProgramFiles%\Microsoft\Exchange Server\V15\Logging\HttpProxy\**\*.log'
+          - '%ProgramFiles%\Microsoft\Exchange Server\V15\Logging\{ECP\Server,OABGeneratorLog}\*.log'
+          - '%ProgramFiles%\Microsoft\Exchange Server\V15\TransportRoles\Logs\**\*.log'
+
+  - name: windows.mssql.errorlog
+    category: server
+    description: SQL Server error logs (sa brute force, xp_cmdshell enablement, CLR assemblies).
+    sources:
+      - os: [windows]
+        paths:
+          - '%ProgramFiles%\Microsoft SQL Server\*\MSSQL\Log\{ERRORLOG*,SQLAGENT.*}'
+          - '%ProgramFiles(x86)%\Microsoft SQL Server\*\MSSQL\Log\{ERRORLOG*,SQLAGENT.*}'
+
+  - name: windows.dhcp_server
+    category: network
+    description: DHCP server audit logs (IP to MAC and host name during the attack window; 7 days).
+    sources:
+      - os: [windows]
+        paths:
+          - '%SystemRoot%\System32\dhcp\{DhcpSrvLog,DhcpV6SrvLog}-*.log'
+
+  - name: windows.backup.veeam
+    category: server
+    description: Veeam Backup and Replication service log (credential theft and backup deletion before encryption).
+    sources:
+      - os: [windows]
+        paths:
+          - '%ProgramData%\Veeam\Backup\Svc*VeeamBackup*.log'
+
+  - name: windows.web.tomcat
+    category: server
+    description: Apache Tomcat logs (application server exploitation, manager application uploads).
+    sources:
+      - os: [windows]
+        paths:
+          - '%ProgramFiles%\Apache Software Foundation\Tomcat*\logs\*'
+          - '%ProgramFiles(x86)%\Apache Software Foundation\Tomcat*\logs\*'
+
+  # --- Full profile only (large, slow or noisy)
+
+  - name: windows.dns_server
+    category: network
+    description: DNS server debug log (only if enabled; can reach 500 MB) and zone files.
+    sources:
+      - os: [windows]
+        paths:
+          - '%SystemRoot%\System32\dns\dns.log'
+          - '%SystemRoot%\System32\dns\*.dns'
+
+  - name: windows.ntfs.txf
+    category: file_system
+    description: NTFS transactional log ($TxfLog $Tops:$T) of the system drive (raw NTFS access).
+    sources:
+      - os: [windows]
+        method: raw
+        paths:
+          - '%SystemDrive%\$Extend\$RmMetadata\$TxfLog\$Tops:$T'
+
+  - name: windows.syscache
+    category: execution
+    description: Syscache.hve (execution evidence on Windows 7 / Server 2008 R2 era systems).
+    sources:
+      - os: [windows]
+        paths:
+          - '%SystemDrive%\System Volume Information\Syscache.hve'
+          - '%SystemDrive%\System Volume Information\Syscache.hve.LOG*'
+
+  - name: windows.staging
+    category: execution
+    description: Scripts and executables in temporary and staging folders (attacker tools, RMM-pushed scripts). Unbounded; may contain malware.
+    sources:
+      - os: [windows]
+        paths:
+          - '%SystemRoot%\Temp\**\*.{exe,dll,ps1,bat,cmd,vbs,js,hta,msi,scr}'
+          - '%UserHome%\AppData\Local\Temp\**\*.{exe,dll,ps1,bat,cmd,vbs,js,hta,msi,scr}'
+          - '%ProgramData%\*.{exe,dll,ps1,bat,cmd,vbs}'
+          - '%SystemDrive%\PerfLogs\**'
+          - '%SystemDrive%\Users\Public\**\*.{exe,dll,ps1,bat,cmd}'
+
+  - name: windows.etl
+    category: logs
+    description: Event trace logs (boot and shutdown process traces, WFP diagnostics, sleep study). Tens to hundreds of MB.
+    sources:
+      - os: [windows]
+        paths:
+          - '%SystemRoot%\System32\WDI\LogFiles\*.etl*'
+          - '%SystemRoot%\System32\LogFiles\WMI\**\*.etl*'
+          - '%SystemRoot%\System32\SleepStudy\**'
+          - '%ProgramData%\Microsoft\Windows\wfp\*.etl'
+
+  - name: windows.update_logs
+    category: system
+    description: Component servicing, Windows Update and setup logs (patch level, install and upgrade times).
+    sources:
+      - os: [windows]
+        paths:
+          - '%SystemRoot%\Logs\CBS\CBS*.log'
+          - '%SystemRoot%\Logs\WindowsUpdate\*.etl'
+          - '%ProgramData%\USOShared\Logs\System\*.etl'
+          - '%SystemRoot%\Panther\{setupact.log,MigLog.xml}'
+
+  - name: windows.cloud_sync
+    category: user_activity
+    description: OneDrive sync logs and settings (exfiltration or insider activity through sanctioned sync).
+    sources:
+      - os: [windows]
+        paths:
+          - '%UserHome%\AppData\Local\Microsoft\OneDrive\{logs,settings}\**'
+
+  - name: windows.old
+    category: registry
+    description: Registry hives, event logs and scheduled tasks of the previous installation in Windows.old (after an in-place upgrade).
+    sources:
+      - os: [windows]
+        paths:
+          - '%SystemDrive%\Windows.old\Windows\System32\config\{SAM,SECURITY,SOFTWARE,SYSTEM,DEFAULT}*'
+          - '%SystemDrive%\Windows.old\Windows\System32\winevt\Logs\*.evtx'
+          - '%SystemDrive%\Windows.old\Windows\System32\Tasks\**'
+
+  - name: windows.sticky_notes
+    category: user_activity
+    description: Sticky Notes database (user text).
+    sources:
+      - os: [windows]
+        paths:
+          - '%UserHome%\AppData\Local\Packages\Microsoft.MicrosoftStickyNotes*\LocalState\plum.sqlite*'

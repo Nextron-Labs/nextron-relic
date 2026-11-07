@@ -4,7 +4,7 @@
 artifacts:
   - name: macos.system_info
     category: system
-    description: macOS version, local accounts files, hosts, sudoers, network and login window preferences.
+    description: macOS version, setup date, local accounts files, hosts, sudoers, PATH, log, firewall (pf), NFS and network configuration, DHCP leases, login window preferences.
     sources:
       - os: [darwin]
         paths:
@@ -13,19 +13,24 @@ artifacts:
           - '/private/etc/sudoers.d/*'
           - '/Library/Preferences/SystemConfiguration/{preferences.plist,NetworkInterfaces.plist,com.apple.airport.preferences.plist}'
           - '/Library/Preferences/{com.apple.loginwindow.plist,com.apple.alf.plist,.GlobalPreferences.plist}'
+          - '/private/etc/{paths,manpaths,asl.conf,syslog.conf,newsyslog.conf,pf.conf,exports,nfs.conf,auto_master,autofs.conf,ttys,localtime}'
+          - '/private/etc/{paths.d,manpaths.d,newsyslog.d,asl,pf.anchors}/*'
+          - '/private/var/db/.AppleSetupDone'
+          - '/private/var/db/dhcpclient/leases/*'
 
   - name: macos.accounts
     category: accounts
-    description: Local directory service user records (include password hash data) and the admin group.
+    description: Local directory service user records (include password hash data), groups (admin, SSH and screen sharing access) and file shares.
     sources:
       - os: [darwin]
         paths:
           - '/private/var/db/dslocal/nodes/Default/users/*.plist'
-          - '/private/var/db/dslocal/nodes/Default/groups/admin.plist'
+          - '/private/var/db/dslocal/nodes/Default/groups/*.plist'
+          - '/private/var/db/dslocal/nodes/Default/sharepoints/*.plist'
 
   - name: macos.persistence
     category: persistence
-    description: Launch agents and daemons, startup items, login/background items, periodic scripts, cron/at tabs and emond rules.
+    description: Launch agents and daemons, startup items, login/background items, launchd overrides, login hooks, re-opened apps, periodic and rc scripts, global shell startup files, cron/at jobs and emond rules.
     sources:
       - os: [darwin]
         paths:
@@ -39,6 +44,15 @@ artifacts:
           - '/private/var/at/tabs/*'
           - '/private/var/db/com.apple.backgroundtaskmanagement/*'
           - '%UserHome%/Library/Application Support/com.apple.backgroundtaskmanagementagent/backgrounditems.btm'
+          - '/private/var/at/jobs/*'
+          - '/private/var/db/com.apple.xpc.launchd/{disabled,loginitems}*.plist'
+          - '/private/var/db/launchd.db/com.apple.launchd*/overrides.plist'
+          - '/private/etc/{rc.netboot,rc.server,rc.cdrom,rc.cleanup,rc.installer_cleanup}'
+          - '/private/etc/{periodic.conf,periodic.conf.local,daily.local,weekly.local,monthly.local}'
+          - '/private/etc/defaults/periodic.conf'
+          - '/private/etc/{profile,bashrc,bashrc_Apple_Terminal,zshenv,zprofile,zshrc,zshrc_Apple_Terminal,zlogin,zlogout}'
+          - '%UserHome%/Library/Preferences/{com.apple.loginwindow.plist,com.apple.loginitems.plist}'
+          - '%UserHome%/Library/Preferences/ByHost/com.apple.loginwindow.*.plist'
 
   - name: macos.logs
     category: logs
@@ -96,12 +110,12 @@ artifacts:
 
   - name: macos.tcc
     category: system
-    description: Transparency, Consent and Control databases (granted privacy permissions). Requires Full Disk Access.
+    description: Transparency, Consent and Control databases (granted privacy permissions) and MDM privacy overrides. Requires Full Disk Access.
     sources:
       - os: [darwin]
         paths:
-          - '/Library/Application Support/com.apple.TCC/TCC.db'
-          - '%UserHome%/Library/Application Support/com.apple.TCC/TCC.db'
+          - '/Library/Application Support/com.apple.TCC/{TCC.db,TCC.db-wal,TCC.db-shm,MDMOverrides.plist}'
+          - '%UserHome%/Library/Application Support/com.apple.TCC/{TCC.db,TCC.db-wal,TCC.db-shm}'
 
   - name: macos.install_history
     category: system
@@ -120,3 +134,258 @@ artifacts:
         paths:
           - '%UserHome%/Library/Application Support/com.apple.sharedfilelist/**'
           - '%UserHome%/Library/Preferences/com.apple.finder.plist'
+
+  - name: macos.gatekeeper
+    category: execution
+    description: Gatekeeper and syspolicyd databases (execution provenance of downloaded apps, Gatekeeper rules and rejects, kext approvals, notarization tickets). Needs root and Full Disk Access.
+    references:
+      - https://eclecticlight.co/2023/05/10/how-macos-now-tracks-the-provenance-of-apps/
+      - https://github.com/jamf/aftermath
+    sources:
+      - os: [darwin]
+        paths:
+          - '/private/var/db/SystemPolicyConfiguration/{ExecPolicy,SystemPolicy,KextPolicy,Tickets}{,-shm,-wal}'
+          - '/private/var/db/SystemPolicyConfiguration/{.LastGKReject,SystemPolicy-prefs.plist}'
+          - '/private/var/db/SystemPolicy{,-shm,-wal}'
+
+  - name: macos.xprotect
+    category: execution
+    description: XProtect behavior service database (processes that accessed protected data such as browser profiles, macOS 13+) and XProtect, XProtect Remediator and MRT versions. Needs root and Full Disk Access.
+    references:
+      - https://eclecticlight.co/2024/06/28/what-do-xprotect-behaviourservice-and-bastion-rules-do/
+    sources:
+      - os: [darwin]
+        paths:
+          - '/private/var/protected/xprotect/XPdb{,-shm,-wal}'
+          - '/private/var/protected/xprotect/db/XPdb{,-shm,-wal}'
+          - '/private/var/protected/xprotect/XProtect.bundle/Contents/{Info.plist,version.plist}'
+          - '/private/var/protected/xprotect/XProtect.bundle/Contents/Resources/XProtect.meta.plist'
+          - '/Library/Apple/System/Library/CoreServices/XProtect.bundle/Contents/{Info.plist,version.plist}'
+          - '/Library/Apple/System/Library/CoreServices/XProtect.bundle/Contents/Resources/XProtect.meta.plist'
+          - '/Library/Apple/System/Library/CoreServices/{XProtect.app,MRT.app}/Contents/{Info.plist,version.plist}'
+
+  - name: macos.coreanalytics
+    category: execution
+    description: CoreAnalytics aggregates (about a month of program executions, also of deleted binaries). The daily .core_analytics reports are part of macos.logs.
+    references:
+      - https://www.crowdstrike.com/en-us/blog/i-know-what-you-did-last-month-a-new-artifact-of-execution-on-macos-10-13/
+    sources:
+      - os: [darwin]
+        paths:
+          - '/private/var/db/analyticsd/aggregates/**'
+
+  - name: macos.terminal_state
+    category: execution
+    description: Terminal and iTerm2 window restoration state, which keeps the scrollback (commands and output) even when shell history was cleared. May contain secrets.
+    references:
+      - https://www.crowdstrike.com/blog/reconstructing-command-line-activity-on-macos/
+    sources:
+      - os: [darwin]
+        paths:
+          - '%UserHome%/Library/Saved Application State/{com.apple.Terminal,com.googlecode.iterm2}.savedState/*'
+          - '%UserHome%/Library/Application Support/iTerm2/SavedState/restorable-state.sqlite{,-shm,-wal}'
+
+  - name: macos.persistence.user_apps
+    category: persistence
+    description: Persistence through application settings and scripts (Dock, Terminal and iTerm2 startup commands, iTerm2 AutoLaunch scripts, Folder Actions, xbar plugins, Hammerspoon).
+    references:
+      - https://theevilbit.github.io/beyond/
+    sources:
+      - os: [darwin]
+        paths:
+          - '%UserHome%/Library/Preferences/{com.apple.dock.plist,com.apple.Terminal.plist,com.googlecode.iterm2.plist,com.apple.FolderActionsDispatcher.plist}'
+          - '/Library/Scripts/Folder Action Scripts/*'
+          - '%UserHome%/Library/Scripts/Folder Action Scripts/*'
+          - '%UserHome%/Library/Application Support/iTerm2/Scripts/AutoLaunch.scpt'
+          - '%UserHome%/Library/Application Support/iTerm2/Scripts/AutoLaunch/**'
+          - '%UserHome%/Library/Application Support/xbar/plugins/*'
+          - '%UserHome%/.hammerspoon/init.lua'
+
+  - name: macos.persistence.auth
+    category: persistence
+    description: Authentication persistence and credential capture points (PAM configuration and modules, authorization database, SecurityAgent and DirectoryServices plugins).
+    references:
+      - https://theevilbit.github.io/beyond/beyond_0028/
+    sources:
+      - os: [darwin]
+        paths:
+          - '/private/etc/pam.d/*'
+          - '/private/var/db/auth.db{,-shm,-wal}'
+          - '/Library/Security/SecurityAgentPlugins/**'
+          - '/Library/DirectoryServices/PlugIns/**'
+          - '/usr/local/lib/pam/*'
+
+  - name: macos.persistence.plugins
+    category: persistence
+    description: Info.plist and main executable of plugins loaded by system processes (QuickLook, Spotlight importers, screen savers, color pickers, preference panes, input methods, scripting additions, audio HAL drivers).
+    sources:
+      - os: [darwin]
+        paths:
+          - '/Library/{QuickLook,Spotlight,Screen Savers,ColorPickers,PreferencePanes,Input Methods,ScriptingAdditions}/*/Contents/{Info.plist,MacOS/*}'
+          - '/Library/Audio/Plug-Ins/HAL/*/Contents/{Info.plist,MacOS/*}'
+          - '%UserHome%/Library/{QuickLook,Spotlight,Screen Savers,ColorPickers,PreferencePanes,Input Methods}/*/Contents/{Info.plist,MacOS/*}'
+
+  - name: macos.privileged_helpers
+    category: persistence
+    description: Privileged helper tools (root helpers installed with SMJobBless, referenced by launch daemons; common for adware and backdoors).
+    sources:
+      - os: [darwin]
+        paths:
+          - '/Library/PrivilegedHelperTools/*'
+
+  - name: macos.extensions
+    category: persistence
+    description: System extension database and Info.plist of system extensions (network filters, VPN, endpoint security) and kernel extensions.
+    sources:
+      - os: [darwin]
+        paths:
+          - '/Library/SystemExtensions/db.plist'
+          - '/Library/SystemExtensions/*/*.systemextension/Contents/Info.plist'
+          - '/Library/Extensions/*/Contents/Info.plist'
+
+  - name: macos.managed_config
+    category: system
+    description: Managed preferences applied by configuration profiles (forced browser extensions, proxies, restrictions). The profile store itself is not collected because profile payloads can contain Wi-Fi and VPN passwords.
+    sources:
+      - os: [darwin]
+        paths:
+          - '/Library/Managed Preferences/**'
+
+  - name: macos.preferences
+    category: system
+    description: System-wide preferences below /Library/Preferences (known Wi-Fi networks, Bluetooth, Time Machine, VPN and network extensions, remote management, deleted users, software update).
+    sources:
+      - os: [darwin]
+        paths:
+          - '/Library/Preferences/**'
+
+  - name: macos.network_usage
+    category: network
+    description: Network usage database (bytes sent and received per process with first and last use; exfiltration and C2 evidence). Needs Full Disk Access.
+    references:
+      - https://github.com/mac4n6/APOLLO
+    sources:
+      - os: [darwin]
+        paths:
+          - '/private/var/networkd/netusage.sqlite{,-shm,-wal}'
+          - '/private/var/networkd/db/netusage.sqlite{,-shm,-wal}'
+
+  - name: macos.remote_access_tools
+    category: remote_access
+    description: Apple Remote Desktop caches, Screen Sharing and Microsoft Remote Desktop client targets, AnyDesk, TeamViewer, RustDesk and Splashtop logs (no access passwords).
+    sources:
+      - os: [darwin]
+        paths:
+          - '/private/var/db/RemoteManagement/caches/{AppUsage.plist,AppUsage.tmp,UserAcct.tmp}'
+          - '/private/var/db/RemoteManagement/RMDB/rmdb.sqlite3'
+          - '/private/var/db/RemoteManagement/ClientCaches/**'
+          - '%UserHome%/Library/Containers/com.apple.ScreenSharing/Data/Library/Preferences/com.apple.ScreenSharing.plist'
+          - '%UserHome%/Library/Containers/com.microsoft.rdc.macos/Data/Library/Application Support/com.microsoft.rdc.macos/com.microsoft.rdc.application-data.sqlite{,-shm,-wal}'
+          - '%UserHome%/.anydesk*/*.trace'
+          - '%UserHome%/Library/Logs/TeamViewer/*'
+          - '%UserHome%/Library/Logs/RustDesk/**'
+          - '/Library/Application Support/Splashtop*/Logs/*'
+          - '%UserHome%/Library/Application Support/Splashtop*/Logs/*'
+
+  - name: macos.login_records
+    category: accounts
+    description: Login records (utmpx), last sudo use per user and terminal, BSM audit trail and audit configuration (audit_warn is also a persistence hook).
+    sources:
+      - os: [darwin]
+        paths:
+          - '/private/var/run/utmpx'
+          - '/private/var/db/sudo/ts/*'
+          - '/private/var/audit/*'
+          - '/private/etc/security/audit_{control,class,event,user,warn}'
+
+  - name: macos.devices
+    category: devices
+    description: Paired Bluetooth devices and connected iOS devices.
+    sources:
+      - os: [darwin]
+        paths:
+          - '/Library/Bluetooth/Library/Preferences/com.apple.MobileBluetooth.devices.plist'
+          - '/Library/Bluetooth/com.apple.MobileBluetooth.ledevices.*'
+          - '%UserHome%/Library/Preferences/com.apple.iPod.plist'
+
+  - name: macos.app_inventory
+    category: system
+    description: Info.plist of installed applications and their embedded login items (name, bundle ID, version).
+    sources:
+      - os: [darwin]
+        paths:
+          - '/Applications/*.app/Contents/Info.plist'
+          - '/Applications/*/*.app/Contents/Info.plist'
+          - '/Applications/*.app/Contents/Library/LoginItems/*/Contents/Info.plist'
+          - '%UserHome%/Applications/*.app/Contents/Info.plist'
+
+  - name: macos.spotlight_shortcuts
+    category: user_activity
+    description: Spotlight search shortcuts (what the user typed to open applications and files).
+    sources:
+      - os: [darwin]
+        paths:
+          - '%UserHome%/Library/Preferences/com.apple.Spotlight.plist'
+          - '%UserHome%/Library/Application Support/com.apple.spotlight.Shortcuts'
+          - '%UserHome%/Library/Application Support/com.apple.spotlight/com.apple.spotlight.Shortcuts{,.v3}'
+          - '%UserHome%/Library/Group Containers/group.com.apple.spotlight/com.apple.spotlight.Shortcuts.v3'
+
+  - name: macos.biome
+    category: user_activity
+    description: Biome streams App.InFocus (foreground applications), App.WebUsage and App.MenuItem (selected menu items), the successor of KnowledgeC usage data. Needs Full Disk Access.
+    references:
+      - https://unit42.paloaltonetworks.com/new-macos-artifact-discovered/
+    sources:
+      - os: [darwin]
+        paths:
+          - '%UserHome%/Library/Biome/streams/restricted/{App.InFocus,App.WebUsage,App.MenuItem}/local/**'
+
+  - name: macos.biome.all
+    category: user_activity
+    description: All Biome streams of users and the system (can be hundreds of MB). Needs Full Disk Access.
+    sources:
+      - os: [darwin]
+        paths:
+          - '%UserHome%/Library/Biome/streams/**'
+          - '/private/var/db/biome/streams/**'
+
+  - name: macos.powerlog
+    category: system
+    description: PowerLog database and archives (application and process energy use, sleep and wake timeline). Often 50 MB or more.
+    sources:
+      - os: [darwin]
+        paths:
+          - '/private/var/db/powerlog/Library/BatteryLife/CurrentPowerlog.PLSQL{,-shm,-wal}'
+          - '/private/var/db/powerlog/Library/BatteryLife/Archives/*.PLSQL.gz'
+
+  - name: macos.screentime
+    category: user_activity
+    description: Screen Time databases (per-application usage, only if Screen Time is enabled). Needs Full Disk Access.
+    sources:
+      - os: [darwin]
+        paths:
+          - '/private/var/folders/*/*/0/com.apple.ScreenTimeAgent/Store/RMAdminStore-{Local,Cloud}.sqlite{,-shm,-wal}'
+
+  - name: macos.icloud_drive
+    category: user_activity
+    description: iCloud Drive client and server databases (file inventory and sync state).
+    sources:
+      - os: [darwin]
+        paths:
+          - '%UserHome%/Library/Application Support/CloudDocs/session/db/{client,server}.db{,-shm,-wal}'
+
+  - name: macos.internet_accounts
+    category: accounts
+    description: Configured internet accounts (Apple, Google, Exchange and others; no passwords).
+    sources:
+      - os: [darwin]
+        paths:
+          - '%UserHome%/Library/Accounts/Accounts4.sqlite{,-shm,-wal}'
+
+  - name: macos.install_history.bom
+    category: system
+    description: Package receipt bill-of-materials files (which package installed which file). 100 MB or more.
+    sources:
+      - os: [darwin]
+        paths:
+          - '/private/var/db/receipts/*.bom'
