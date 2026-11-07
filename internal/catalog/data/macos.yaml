@@ -245,12 +245,11 @@ artifacts:
 
   - name: macos.managed_config
     category: system
-    description: Managed preferences and configuration profile store (rogue profiles, forced browser extensions, proxies, root certificates, privacy grants). The store needs Full Disk Access.
+    description: Managed preferences applied by configuration profiles (forced browser extensions, proxies, restrictions). The profile store itself is not collected because profile payloads can contain Wi-Fi and VPN passwords.
     sources:
       - os: [darwin]
         paths:
           - '/Library/Managed Preferences/**'
-          - '/private/var/db/ConfigurationProfiles/**'
 
   - name: macos.preferences
     category: system

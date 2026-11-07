@@ -48,7 +48,7 @@ as the release notes when its tag is pushed (see `docs/releasing.md`).
       CoreAnalytics, Terminal and iTerm2 saved state.
     - Persistence: authorization and PAM plugins, plugin load points,
       privileged helpers, system extensions, user application settings.
-    - Managed configuration profiles, `/Library/Preferences`, network usage
+    - Managed preferences, `/Library/Preferences`, network usage
       per process, remote access tools, login records, Bluetooth and iOS
       devices, application inventory, Spotlight shortcuts, Biome.
     - `full` only: all Biome streams, PowerLog, Screen Time, iCloud Drive,

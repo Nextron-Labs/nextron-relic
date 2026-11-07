@@ -325,7 +325,7 @@ artifacts:
 
   - name: windows.rmm.screenconnect
     category: remote_access
-    description: ConnectWise ScreenConnect client command and file transfer traces and configuration; on a ScreenConnect server the session database, user and role definitions, web.config and App_Extensions (webshells).
+    description: ConnectWise ScreenConnect client command and file transfer traces and configuration; on a ScreenConnect server the session database, user and role definitions (with password hashes), web.config and App_Extensions (webshells).
     references:
       - https://docs.velociraptor.app/exchange/artifacts/pages/screenconnect/
     sources:
@@ -752,7 +752,7 @@ artifacts:
 
   - name: windows.iis.config
     category: server
-    description: IIS configuration (modules and handlers, IIS backdoors), automatic configuration history snapshots, web.config files and HTTP.sys error logs.
+    description: IIS configuration (modules and handlers, IIS backdoors; application pool passwords are stored encrypted), automatic configuration history snapshots, web.config files and HTTP.sys error logs.
     sources:
       - os: [windows]
         paths:

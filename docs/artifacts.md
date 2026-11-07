@@ -43,7 +43,7 @@ Profiles are cumulative: `standard` contains `minimal`, `full` contains everythi
 | `windows.rdp_bitmap_cache` | Windows | full | RDP client bitmap cache (screen fragments of outgoing RDP sessions). |
 | `windows.thumbcache` | Windows | full | Explorer thumbnail and icon caches. |
 | `windows.iis_logs` | Windows | full | IIS web server logs (can be large on busy servers). |
-| `windows.rmm.screenconnect` | Windows | standard | ConnectWise ScreenConnect client command and file transfer traces and configuration; on a ScreenConnect server the session database, user and role definitions, web.config and App_Extensions (webshells). |
+| `windows.rmm.screenconnect` | Windows | standard | ConnectWise ScreenConnect client command and file transfer traces and configuration; on a ScreenConnect server the session database, user and role definitions (with password hashes), web.config and App_Extensions (webshells). |
 | `windows.rmm.splashtop` | Windows | standard | Splashtop Streamer and gateway logs (sessions with client IP, file transfers, chat). Also used by Atera remote access. |
 | `windows.rmm.atera` | Windows | standard | Atera agent package logs and configuration (remote commands and their output). |
 | `windows.rmm.ninjaone` | Windows | standard | NinjaOne (NinjaRMM) agent logs. |
@@ -84,7 +84,7 @@ Profiles are cumulative: `standard` contains `minimal`, `full` contains everythi
 | `windows.startupinfo` | Windows | standard | StartupInfo XML files (processes started shortly after logon, with command lines). |
 | `windows.logs.debug` | Windows | standard | Logs below %SystemRoot%\debug (netlogon.log for Zerologon and secure channel failures, NetSetup.LOG for domain joins, MSRT log). |
 | `windows.ad.sysvol` | Windows | standard | Domain controller SYSVOL policies and NETLOGON scripts (GPO-based ransomware deployment, logon scripts, Group Policy Preferences). Binaries in NETLOGON are not collected; they are listed in $MFT. |
-| `windows.iis.config` | Windows | standard | IIS configuration (modules and handlers, IIS backdoors), automatic configuration history snapshots, web.config files and HTTP.sys error logs. |
+| `windows.iis.config` | Windows | standard | IIS configuration (modules and handlers, IIS backdoors; application pool passwords are stored encrypted), automatic configuration history snapshots, web.config files and HTTP.sys error logs. |
 | `windows.exchange.webshells` | Windows | standard | Script files in the Exchange webshell locations (owa/auth, ecp/auth, aspnet_client) and the Exchange setup log. |
 | `windows.exchange.logs` | Windows | full | Exchange HttpProxy, ECP, OAB generator and transport logs (ProxyLogon/ProxyShell investigations). Often several GB. |
 | `windows.mssql.errorlog` | Windows | standard | SQL Server error logs (sa brute force, xp_cmdshell enablement, CLR assemblies). |
@@ -176,7 +176,7 @@ Profiles are cumulative: `standard` contains `minimal`, `full` contains everythi
 | `macos.persistence.plugins` | macOS | standard | Info.plist and main executable of plugins loaded by system processes (QuickLook, Spotlight importers, screen savers, color pickers, preference panes, input methods, scripting additions, audio HAL drivers). |
 | `macos.privileged_helpers` | macOS | standard | Privileged helper tools (root helpers installed with SMJobBless, referenced by launch daemons; common for adware and backdoors). |
 | `macos.extensions` | macOS | standard | System extension database and Info.plist of system extensions (network filters, VPN, endpoint security) and kernel extensions. |
-| `macos.managed_config` | macOS | standard | Managed preferences and configuration profile store (rogue profiles, forced browser extensions, proxies, root certificates, privacy grants). The store needs Full Disk Access. |
+| `macos.managed_config` | macOS | standard | Managed preferences applied by configuration profiles (forced browser extensions, proxies, restrictions). The profile store itself is not collected because profile payloads can contain Wi-Fi and VPN passwords. |
 | `macos.preferences` | macOS | standard | System-wide preferences below /Library/Preferences (known Wi-Fi networks, Bluetooth, Time Machine, VPN and network extensions, remote management, deleted users, software update). |
 | `macos.network_usage` | macOS | standard | Network usage database (bytes sent and received per process with first and last use; exfiltration and C2 evidence). Needs Full Disk Access. |
 | `macos.remote_access_tools` | macOS | standard | Apple Remote Desktop caches, Screen Sharing and Microsoft Remote Desktop client targets, AnyDesk, TeamViewer, RustDesk and Splashtop logs (no access passwords). |
