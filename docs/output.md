@@ -110,6 +110,14 @@ errors are kept per artifact (`errors`, `errors_dropped`).
 
 ### Console output
 
-Logs go to stderr (`--log-format text|json`, `--log-level`, `-q`). With
-`--json` stdout contains only the result object. Without `--json` a short
-summary is printed to stderr. Progress is logged every 15 seconds.
+Logs go to stderr (`--log-format text|json`, `--log-level`, `-v`, `-q`).
+With `--json` stdout contains only the result object. Without `--json` a
+short summary is printed to stderr. Progress is logged every 15 seconds
+(`--progress-interval`). `--log-file` additionally writes the log as JSON
+lines with UTC timestamps; see the [CLI reference](cli.md#logging).
+
+`relic.log` in the archive always contains level `info` and above, plus
+`debug` with `--log-level debug` / `-v`. Its timestamps are UTC.
+
+Verify an archive later (integrity and every file hash) with
+`relic verify <archive> [--result status.json]`.

@@ -12,7 +12,7 @@
 #
 # Checks: checksum from SHA256SUMS, version stamp, info commands, example
 # configurations, a "minimal" collection (exit code 0 or 1) and the archive
-# it produced (scripts/smoke-check.py).
+# it produced (scripts/smoke-check.py independently, and "relic verify").
 set -euo pipefail
 
 dist="${1:?usage: smoke-test.sh <dist-dir> <platform-suffix>}"
@@ -80,3 +80,6 @@ args=(result.json --exit-code "$code")
 [ -n "${EXPECTED_VERSION:-}" ] && args+=(--expect-version "$EXPECTED_VERSION")
 [ "${SMOKE_RAW:-}" = true ] && args+=(--require-raw-hive)
 "$py" "$here/smoke-check.py" "${args[@]}"
+
+archive="$("$py" -c 'import json,sys; print(json.load(open(sys.argv[1]))["output"]["path"])' result.json)"
+"$bin" verify "$archive" --result result.json

@@ -36,6 +36,9 @@ var ErrInterrupted = errors.New("interrupted")
 
 var errTimeLimit = errors.New("max_duration reached")
 
+// DefaultProgressInterval is used when Options.ProgressInterval is 0.
+const DefaultProgressInterval = 15 * time.Second
+
 // Archive entry names of the metadata files.
 const (
 	ManifestName        = "manifest.json"
@@ -53,6 +56,13 @@ type Options struct {
 	DryRun    bool
 	Overrides []string
 	Logger    *slog.Logger
+	// ArchiveLogLevel is the level of relic.log in the archive. It is never
+	// higher than info, so the archive always holds the complete run log;
+	// slog.LevelDebug adds per-file decisions.
+	ArchiveLogLevel slog.Level
+	// ProgressInterval is the minimum time between progress log messages.
+	// 0 uses DefaultProgressInterval; a negative value disables them.
+	ProgressInterval time.Duration
 
 	// Optional overrides for tests.
 	Accessor *source.Accessor
@@ -96,6 +106,8 @@ type run struct {
 	stopped      string // name of the limit that stopped the collection
 	fatal        error
 	lastProgress time.Time
+	progressIvl  time.Duration
+	step, steps  int // current artifact (1-based) and number of artifacts
 	limitsHit    map[string]bool
 }
 
@@ -118,6 +130,10 @@ func Run(ctx context.Context, o Options) *result.Result {
 	}
 	if o.GOOS != "" {
 		r.goos = o.GOOS
+	}
+	r.progressIvl = o.ProgressInterval
+	if r.progressIvl == 0 {
+		r.progressIvl = DefaultProgressInterval
 	}
 	r.style = pathspec.StyleFor(r.goos)
 	host := hostinfo.Host()
@@ -193,9 +209,15 @@ func (r *run) execute(parent context.Context) {
 
 	r.log.Info("collection started",
 		"profile", r.cfg.Collect.Profile, "artifacts", len(sel.Artifacts),
-		"output", r.outPath, "dry_run", r.opts.DryRun, "method", r.cfg.Collect.Method)
+		"output", r.outPath, "dry_run", r.opts.DryRun, "method", r.cfg.Collect.Method,
+		"elevated", r.res.Host.Elevated, "user", r.res.Host.User)
+	if !r.res.Host.Elevated {
+		r.log.Warn("not running " + elevationHint(r.goos) + "; protected files and directories will be reported as unreadable")
+	}
 
-	for _, s := range sel.Artifacts {
+	r.steps = len(sel.Artifacts)
+	for i, s := range sel.Artifacts {
+		r.step = i + 1
 		if r.halted(ctx) {
 			r.res.Artifacts = append(r.res.Artifacts, result.ArtifactResult{
 				Name: s.Artifact.Name, Status: result.ArtifactSkipped, Custom: s.Custom, Reason: s.Reason})
@@ -336,7 +358,7 @@ func (r *run) openOutput() error {
 		return err
 	}
 	r.logBuf = bufio.NewWriterSize(r.logFile, 64<<10)
-	r.log = logging.Tee(r.log, slog.NewJSONHandler(r.logBuf, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	r.log = logging.Tee(r.log, logging.NewFileHandler(r.logBuf, min(r.opts.ArchiveLogLevel, slog.LevelInfo)))
 	if appended {
 		r.log.Warn("output path has no .zip extension; appended it (end the path with a path separator to write into a directory)",
 			"output", r.cfg.Output.Path, "archive", p)
@@ -470,6 +492,17 @@ func (r *run) computeStatus() {
 	r.res.Status = st
 	r.res.ExitCode = st.ExitCode()
 	r.res.StatusReason = reason
+}
+
+// elevationHint names the privileges a complete collection needs.
+func elevationHint(goos string) string {
+	switch goos {
+	case "windows":
+		return "elevated (administrator or LocalSystem)"
+	case "darwin":
+		return "as root (and Full Disk Access is needed for TCC-protected locations)"
+	}
+	return "as root"
 }
 
 func keyHash(k string) [16]byte {

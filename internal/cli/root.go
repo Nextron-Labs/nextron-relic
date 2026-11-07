@@ -78,6 +78,7 @@ Exit codes: 0 complete, 1 partial, 2 failed, 3 canceled, 4 invalid usage/configu
 		newListCmd(stdout),
 		newShowCmd(stdout),
 		newConfigCmd(stdout, stderr),
+		newVerifyCmd(stdout, stderr),
 		newVersionCmd(stdout),
 	)
 	return root

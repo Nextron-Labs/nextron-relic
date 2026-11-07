@@ -36,6 +36,12 @@ relic collect --profile minimal --output /var/tmp/ --json
 # See what would be collected without reading anything
 relic collect --profile standard --dry-run
 
+# Only specific artifacts and paths (webshell triage), tagged with a case ID
+relic collect -a linux.logs.auth --path '/var/www/**/*.php' --job-id IR-2026-0042
+
+# Check an archive and every file hash in it (e.g. after transfer)
+relic verify relic_HOST_20261107T215424Z.zip --result status.json
+
 # Controlled by a configuration file
 relic validate examples/management-center-windows-triage.yaml --os windows
 relic collect -c examples/management-center-windows-triage.yaml --json --status-file status.json
@@ -46,6 +52,7 @@ Discover artifacts and profiles:
 ```bash
 relic list profiles
 relic list artifacts --os windows
+relic list artifacts --search usb            # search names, descriptions and paths
 relic show artifact windows.ntfs.usnjrnl     # YAML definition, usable as template
 relic config show --profile minimal          # effective configuration with all defaults
 relic config schema                          # JSON Schema of the configuration
@@ -96,6 +103,8 @@ Linux kernel 3.2.
 
 ## Documentation
 
+- [Command line reference](docs/cli.md): all commands and flags, logging
+  options, `relic verify`.
 - [Configuration](docs/configuration.md): format, selection, custom
   artifacts, path patterns and variables, access methods, limits.
 - [Built-in artifacts](docs/artifacts.md): catalog and profile membership.
