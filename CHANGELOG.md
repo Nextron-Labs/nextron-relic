@@ -6,8 +6,24 @@ as the release notes when its tag is pushed (see `docs/releasing.md`).
 
 ## [Unreleased]
 
+## [0.2.0]
+
+Maintenance release: archive naming fix, 32-bit Windows under WoW64, and a
+release pipeline that runs every binary before it is published. A development
+build was also exercised on a Windows 11 Enterprise 25H2 test system (raw NTFS
+fallback, NTFS metadata files, `$J` sparse trimming, hash provenance, exit
+codes, `oversize: truncate`, 32-bit build under WoW64).
+
 ### Fixed
 
+- **Archive without `.zip` extension** ([#3](https://github.com/Nextron-Labs/nextron-relic/issues/3)):
+  `--output C:\relic-out` (a path that does not exist, without a trailing
+  separator) wrote the archive as an extension-less file `C:\relic-out`,
+  which `*.zip` wildcards, Explorer and `Expand-Archive` ignore. Relic now
+  appends `.zip` to any archive name that does not end in `.zip`
+  (`C:\relic-out.zip`) and logs a warning. Existing directories and paths
+  ending with a separator still receive the default file name. This also
+  applies to `output.path` in configuration files.
 - **32-bit Windows binary on 64-bit Windows (WoW64):** Windows silently
   redirected file access below `%SystemRoot%\System32` to `SysWOW64`, so
   registry hives, event logs, scheduled tasks and other System32 artifacts
@@ -82,5 +98,6 @@ artifacts, shipped as a single static binary per platform.
 
 See README.md for details.
 
-[Unreleased]: https://github.com/Nextron-Labs/nextron-relic/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/Nextron-Labs/nextron-relic/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/Nextron-Labs/nextron-relic/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Nextron-Labs/nextron-relic/releases/tag/v0.1.0

@@ -68,7 +68,7 @@ record per file), relic.log, config.yaml and config.effective.yaml.`,
 	fl.StringVarP(&f.profile, "profile", "p", "", "built-in profile (minimal, standard, full); replaces collect.profile")
 	fl.StringArrayVarP(&f.artifacts, "artifact", "a", nil, "add an artifact or wildcard (repeatable)")
 	fl.StringArrayVarP(&f.excludes, "exclude-artifact", "x", nil, "exclude an artifact or wildcard (repeatable)")
-	fl.StringVarP(&f.output, "output", "o", "", "archive path or directory; placeholders {hostname}, {timestamp}, {job_id}")
+	fl.StringVarP(&f.output, "output", "o", "", "archive file, or directory if it exists or ends with a path separator; .zip is appended to file names without it; placeholders {hostname}, {timestamp}, {job_id}")
 	fl.BoolVar(&f.overwrite, "overwrite", false, "overwrite an existing archive")
 	fl.BoolVar(&f.dryRun, "dry-run", false, "resolve and list matching files without reading them or writing an archive")
 	fl.BoolVar(&f.asJSON, "json", false, "print the result as JSON on stdout")

@@ -56,7 +56,7 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "path": {"description": "Archive path or directory. Placeholders: {hostname}, {timestamp}, {job_id}.", "type": "string", "minLength": 1},
+        "path": {"description": "Archive file or directory. A path that ends with a path separator or is an existing directory gets the default file name; any other path gets .zip appended unless it already ends in .zip. Placeholders: {hostname}, {timestamp}, {job_id}.", "type": "string", "minLength": 1},
         "compression": {"enum": ["auto", "deflate", "store"]},
         "compression_level": {"type": "integer", "minimum": 1, "maximum": 9},
         "overwrite": {"type": "boolean"}

@@ -256,11 +256,20 @@ func (r *run) compileGlobalExcludes() {
 var unsafeChars = regexp.MustCompile(`[^A-Za-z0-9._-]+`)
 
 // OutputPath expands placeholders and turns directories into a file path.
+// The file name always ends in ".zip": a path that is neither a directory
+// nor ends in ".zip" (case-insensitive) gets the extension appended, so an
+// archive is never written under a name that extension-based tools ignore.
 func OutputPath(p string, job config.Job, host string, t time.Time) (string, error) {
+	out, _, err := outputPath(p, job, host, t)
+	return out, err
+}
+
+// outputPath implements OutputPath and also reports whether ".zip" was appended.
+func outputPath(p string, job config.Job, host string, t time.Time) (string, bool, error) {
 	if p == "" {
 		p = config.DefaultOutputName
 	}
-	if strings.HasSuffix(p, "/") || strings.HasSuffix(p, string(os.PathSeparator)) {
+	if hasTrailingSeparator(p) {
 		p = filepath.Join(p, config.DefaultOutputName)
 	} else if fi, err := os.Stat(p); err == nil && fi.IsDir() {
 		p = filepath.Join(p, config.DefaultOutputName)
@@ -275,11 +284,28 @@ func OutputPath(p string, job config.Job, host string, t time.Time) (string, err
 		"{job_id}", unsafeChars.ReplaceAllString(jobID, "_"),
 	)
 	p = repl.Replace(p)
-	return filepath.Abs(p)
+	appended := false
+	if !HasZipExt(p) {
+		p += ".zip"
+		appended = true
+	}
+	abs, err := filepath.Abs(p)
+	return abs, appended, err
+}
+
+// HasZipExt reports whether the file name of p ends in ".zip" (any case).
+func HasZipExt(p string) bool {
+	return strings.EqualFold(filepath.Ext(p), ".zip")
+}
+
+// hasTrailingSeparator reports whether p ends with a path separator ("/" on every
+// platform, also "\" on Windows).
+func hasTrailingSeparator(p string) bool {
+	return strings.HasSuffix(p, "/") || strings.HasSuffix(p, string(os.PathSeparator))
 }
 
 func (r *run) openOutput() error {
-	p, err := OutputPath(r.cfg.Output.Path, r.cfg.Job, r.res.Host.Hostname, r.res.StartedAt)
+	p, appended, err := outputPath(r.cfg.Output.Path, r.cfg.Job, r.res.Host.Hostname, r.res.StartedAt)
 	if err != nil {
 		return err
 	}
@@ -311,6 +337,10 @@ func (r *run) openOutput() error {
 	}
 	r.logBuf = bufio.NewWriterSize(r.logFile, 64<<10)
 	r.log = logging.Tee(r.log, slog.NewJSONHandler(r.logBuf, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	if appended {
+		r.log.Warn("output path has no .zip extension; appended it (end the path with a path separator to write into a directory)",
+			"output", r.cfg.Output.Path, "archive", p)
+	}
 	return nil
 }
 

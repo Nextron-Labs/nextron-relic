@@ -72,8 +72,8 @@ make test       # unit and integration tests
 
 | Platform | Built | Smoke test of the built binary (CI and release) | Other testing |
 |---|---|---|---|
-| Windows amd64 | yes | yes, elevated GitHub Windows runner | Test suite in CI, including live raw NTFS tests (`$MFT`, `$UsnJrnl:$J`, locked SYSTEM hive via raw fallback, event logs). Not yet run on production endpoints. |
-| Windows 386 | yes | yes, as 32-bit process on 64-bit Windows (WoW64) | – |
+| Windows amd64 | yes | yes, elevated GitHub Windows runner | Test suite in CI, including live raw NTFS tests (`$MFT`, `$UsnJrnl:$J`, locked SYSTEM hive via raw fallback, event logs). Development build preceding 0.2.0 run elevated on a Windows 11 Enterprise 25H2 test system (`minimal`/`standard`, NTFS metadata, limits, exit codes). Not yet run on production endpoints. |
+| Windows 386 | yes | yes, as 32-bit process on 64-bit Windows (WoW64) | Development build preceding 0.2.0 run under WoW64 on Windows 11 25H2. |
 | Windows arm64 | yes | no | Not run. |
 | Linux amd64 | yes | yes, as root on a GitHub Ubuntu runner | Test suite in CI (also as root). Release 0.1.0 binary run in Debian 13 (Docker). |
 | Linux 386 | yes | yes, as root on 64-bit Ubuntu | Release 0.1.0 binary run in Debian 13 (Docker). |
@@ -120,7 +120,8 @@ Linux kernel 3.2.
 
 ## Known limitations
 
-- **Windows has not been run on a real system yet** (see platform support).
+- **Windows has only been run on CI runners and a Windows 11 test system**,
+  not yet on production endpoints (see platform support).
   Raw NTFS access works only for NTFS volumes with a drive letter; ReFS,
   FAT, BitLocker-locked volumes and mount points without a letter fall back
   to OS reads only.

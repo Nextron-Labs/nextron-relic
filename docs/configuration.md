@@ -76,6 +76,15 @@ Output placeholders: `{hostname}`, `{timestamp}` (UTC, `20261106T142226Z`) and
 `{job_id}` (`nojob` if unset). If `--output` names a directory, the file name
 pattern of the configuration is kept.
 
+How the output path is interpreted:
+
+| Path | Archive |
+|---|---|
+| ends with `/` (or `\` on Windows) | `<dir>/relic_{hostname}_{timestamp}.zip`; the directory is created |
+| an existing directory | `<dir>/relic_{hostname}_{timestamp}.zip` |
+| ends with `.zip` (any case) | used as is |
+| anything else, e.g. `C:\relic-out` | `.zip` is appended (`C:\relic-out.zip`) and a warning is logged |
+
 ## Artifact selection
 
 The selection is built in this order, and this order is also the collection
