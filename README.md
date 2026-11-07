@@ -108,6 +108,8 @@ Linux kernel 3.2.
 - [Configuration](docs/configuration.md): format, selection, custom
   artifacts, path patterns and variables, access methods, limits.
 - [Built-in artifacts](docs/artifacts.md): catalog and profile membership.
+  The research behind the catalog, with sources per path, is in
+  [docs/research](docs/research/).
 - [Output](docs/output.md): archive layout, file records, result JSON,
   status values and exit codes.
 - [Management Center integration](docs/management-center-integration.md):
