@@ -1,0 +1,87 @@
+name: smoke
+
+# Runs the built binaries (not `go test`) on real runners:
+# - verifies the checksum from SHA256SUMS and the version stamp,
+# - runs the info commands and validates the example configurations,
+# - collects the "minimal" profile (as root on Linux, elevated on Windows)
+#   and verifies the archive, manifest and every file hash,
+# - on Windows requires the locked SYSTEM registry hive to be read via raw
+#   NTFS, including from the 32-bit binary on 64-bit Windows (WoW64).
+#
+# Called by ci.yml (binaries of every change) and release.yml (the exact
+# release binaries, before they are published). Can be started by hand to
+# test the assets of an existing release:
+#
+#   gh workflow run smoke.yml -f tag=v0.1.0
+
+on:
+  workflow_call:
+    inputs:
+      artifact:
+        description: Name of a workflow artifact containing the dist/ files.
+        type: string
+        default: ''
+      tag:
+        description: Release tag whose assets are tested when no artifact is given.
+        type: string
+        default: ''
+      version:
+        description: Version the binaries must report (without "v"); empty skips the check.
+        type: string
+        default: ''
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to test, e.g. v0.1.0
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: smoke (${{ matrix.binary }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: ubuntu-latest, binary: linux-amd64, sudo: true}
+          - {os: ubuntu-latest, binary: linux-386, sudo: true}
+          - {os: windows-latest, binary: windows-amd64.exe, raw: true}
+          - {os: windows-latest, binary: windows-386.exe, raw: true}
+          - {os: macos-latest, binary: darwin-arm64}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ inputs.tag }}
+      SMOKE_SUDO: ${{ matrix.sudo && 'true' || '' }}
+      SMOKE_RAW: ${{ matrix.raw && 'true' || '' }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download build artifact
+        if: inputs.artifact != ''
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.artifact }}
+          path: dist
+
+      - name: Download release assets
+        if: inputs.artifact == ''
+        run: |
+          [ -n "$TAG" ] || { echo "::error::either artifact or tag is required"; exit 1; }
+          gh release download "$TAG" --dir dist --pattern "relic-*-${{ matrix.binary }}" --pattern SHA256SUMS
+
+      - name: Smoke test
+        env:
+          EXPECTED_VERSION: ${{ inputs.version != '' && inputs.version || '' }}
+        run: |
+          if [ -z "$EXPECTED_VERSION" ] && [ -n "$TAG" ]; then
+            export EXPECTED_VERSION="${TAG#v}"
+          fi
+          scripts/smoke-test.sh dist "${{ matrix.binary }}"

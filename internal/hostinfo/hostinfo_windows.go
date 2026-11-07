@@ -33,7 +33,9 @@ func platformExpander(v pathspec.Vars) *pathspec.Expander {
 	v.Set("SystemRoot", sysRoot)
 	v.Set("WinDir", env("windir", sysRoot))
 	v.Set("ProgramData", env("ProgramData", sysDrive+`\ProgramData`))
-	v.Set("ProgramFiles", env("ProgramFiles", sysDrive+`\Program Files`))
+	// A 32-bit process on 64-bit Windows sees ProgramFiles as
+	// "Program Files (x86)"; ProgramW6432 always names the native directory.
+	v.Set("ProgramFiles", env("ProgramW6432", env("ProgramFiles", sysDrive+`\Program Files`)))
 	// Not present on 32-bit Windows: the variable is known but has no value,
 	// so patterns using it expand to nothing instead of failing.
 	if pf86 := env("ProgramFiles(x86)", ""); pf86 != "" {
@@ -52,11 +54,12 @@ func platformExpander(v pathspec.Vars) *pathspec.Expander {
 // directories below %SystemDrive%\Users.
 func UserHomes() []string {
 	var cands []string
-	k, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList`, registry.ENUMERATE_SUB_KEYS|registry.READ)
+	// WOW64_64KEY reads the native registry view from a 32-bit process.
+	k, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList`, registry.ENUMERATE_SUB_KEYS|registry.READ|registry.WOW64_64KEY)
 	if err == nil {
 		names, _ := k.ReadSubKeyNames(-1)
 		for _, n := range names {
-			sk, err := registry.OpenKey(k, n, registry.QUERY_VALUE)
+			sk, err := registry.OpenKey(k, n, registry.QUERY_VALUE|registry.WOW64_64KEY)
 			if err != nil {
 				continue
 			}
@@ -108,7 +111,7 @@ func LowerPriority() error {
 }
 
 func osVersion() string {
-	k, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\Windows NT\CurrentVersion`, registry.QUERY_VALUE)
+	k, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\Windows NT\CurrentVersion`, registry.QUERY_VALUE|registry.WOW64_64KEY)
 	if err != nil {
 		return "Windows"
 	}
