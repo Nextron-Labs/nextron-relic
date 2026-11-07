@@ -152,6 +152,12 @@ Linux kernel 3.2.
 - **No encryption and no upload.** Archives are unencrypted ZIP files and
   Relic has no upload function; transport is left to the Management Center
   or the operator.
+- **Symbolic links to directories** are not followed by wildcards. Logs
+  below a symlinked directory (e.g. `/var/log/vmware` on vCenter appliances)
+  need their own artifact; `linux.appliance.vcenter` covers that case.
+- **`/var/log/lastlog`** is a sparse file whose apparent size grows with the
+  highest UID. On hosts with directory-service UIDs it exceeds
+  `max_file_size` and is skipped (the run is then `partial`).
 - **Live sources.** Files that change while being read are recorded with
   `changed_during_read` (OS method). Growing files are read up to the current
   end or `max_file_size`.

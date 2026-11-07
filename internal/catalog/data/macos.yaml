@@ -13,7 +13,7 @@ artifacts:
           - '/private/etc/sudoers.d/*'
           - '/Library/Preferences/SystemConfiguration/{preferences.plist,NetworkInterfaces.plist,com.apple.airport.preferences.plist}'
           - '/Library/Preferences/{com.apple.loginwindow.plist,com.apple.alf.plist,.GlobalPreferences.plist}'
-          - '/private/etc/{paths,manpaths,asl.conf,syslog.conf,newsyslog.conf,pf.conf,hosts.equiv,exports,nfs.conf,auto_master,autofs.conf,ttys,localtime}'
+          - '/private/etc/{paths,manpaths,asl.conf,syslog.conf,newsyslog.conf,pf.conf,exports,nfs.conf,auto_master,autofs.conf,ttys,localtime}'
           - '/private/etc/{paths.d,manpaths.d,newsyslog.d,asl,pf.anchors}/*'
           - '/private/var/db/.AppleSetupDone'
           - '/private/var/db/dhcpclient/leases/*'

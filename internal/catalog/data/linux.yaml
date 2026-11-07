@@ -4,30 +4,43 @@
 artifacts:
   - name: linux.accounts
     category: accounts
-    description: Local users, groups and sudo configuration.
+    description: Local users and groups with their backup copies (the difference shows the last change), sudo/doas and PAM security configuration.
     sources:
       - os: [linux]
         paths:
           - '/etc/{passwd,group,sudoers,login.defs}'
           - '/etc/sudoers.d/*'
+          - '/etc/{passwd-,group-,subuid,subgid,shells,doas.conf}'
+          - '/var/backups/{passwd,group}.bak'
+          - '/etc/security/*.conf'
+          - '/etc/security/{limits.d,namespace.d}/*'
 
   - name: linux.accounts.shadow
     category: accounts
-    description: Shadow password files (password hashes and password change dates).
+    description: Shadow password files with backup copies and password history (password hashes and change dates).
     sources:
       - os: [linux]
         paths:
-          - '/etc/{shadow,gshadow}'
+          - '/etc/{shadow,gshadow,shadow-,gshadow-}'
+          - '/var/backups/{shadow,gshadow}.bak'
+          - '/etc/security/opasswd'
 
   - name: linux.logs.auth
     category: logs
-    description: Authentication, system and audit logs including rotated files, wtmp/btmp/lastlog.
+    description: Authentication, system, cron and audit logs including rotated files, login records (utmp, wtmp/btmp/lastlog, wtmpdb, lastlog2), logind sessions, faillock tallies and first sudo use per user.
     sources:
       - os: [linux]
         paths:
           - '/var/log/{auth.log,secure,syslog,messages,kern.log}*'
           - '/var/log/audit/audit.log*'
           - '/var/log/{wtmp,btmp,lastlog,faillog}*'
+          - '/var/log/cron*'
+          - '/run/utmp'
+          - '/var/lib/wtmpdb/wtmp.db'
+          - '/var/lib/lastlog/lastlog2.db'
+          - '/run/systemd/sessions/*'
+          - '/run/faillock/*'
+          - '/var/{lib,db}/sudo/lectured/*'
 
   - name: linux.logs.var_log
     category: logs
@@ -50,7 +63,7 @@ artifacts:
 
   - name: linux.persistence.cron
     category: persistence
-    description: cron, anacron and at job definitions and spool directories.
+    description: cron, anacron, at, incron and BusyBox/Alpine job definitions and spool directories.
     sources:
       - os: [linux]
         paths:
@@ -60,28 +73,39 @@ artifacts:
           - '/var/spool/cron/**'
           - '/var/spool/anacron/*'
           - '/var/spool/at/**'
+          - '/etc/crontabs/*'
+          - '/etc/periodic/**'
+          - '/etc/incron.d/*'
+          - '/var/spool/incron/*'
 
   - name: linux.persistence.systemd
     category: persistence
-    description: Local and runtime systemd units and configuration, user units.
+    description: Local, runtime, transient and generated systemd units and configuration, user units, lingering users and timer stamps (last run).
     sources:
       - os: [linux]
         paths:
           - '/etc/systemd/**'
           - '/run/systemd/{system,user}/**'
+          - '/run/systemd/{transient,generator,generator.early,generator.late,system.control}/**'
+          - '/run/user/*/systemd/{transient,generator,generator.early,generator.late,user,user.control}/**'
           - '%UserHome%/.config/systemd/user/**'
+          - '%UserHome%/.local/share/systemd/user/**'
+          - '/etc/xdg/systemd/user/**'
+          - '/usr/local/lib/systemd/{system,user,system-generators,user-generators}/**'
+          - '/var/lib/systemd/{linger,timers}/*'
 
   - name: linux.persistence.systemd_vendor
     category: persistence
-    description: Vendor-supplied systemd units below /usr/lib/systemd.
+    description: Vendor-supplied systemd units, drop-ins and generators below /usr/lib/systemd (planted units are found by comparing hashes with the package md5sums).
     sources:
       - os: [linux]
         paths:
-          - '/usr/lib/systemd/{system,user}/*'
+          - '/usr/lib/systemd/{system,user}/**'
+          - '/usr/lib/systemd/{system,user}-generators/*'
 
   - name: linux.persistence.init
     category: persistence
-    description: SysV init scripts, rc.local, shell profiles, dynamic linker preload, kernel module, udev, motd and XDG autostart configuration.
+    description: SysV/OpenRC init scripts and runlevel links, rc.local, inetd/xinetd, system-wide shell startup files (bash, zsh, csh, fish), dynamic linker preload, kernel module, udev, binfmt, environment, motd, X session and autostart configuration.
     sources:
       - os: [linux]
         paths:
@@ -91,6 +115,21 @@ artifacts:
           - '/etc/init/*.conf'
           - '/etc/{profile.d,ld.so.conf.d,modules-load.d,modprobe.d,update-motd.d,udev/rules.d,xdg/autostart}/*'
           - '%UserHome%/.config/autostart/*'
+          - '/etc/{bashrc,zshrc,zshenv,zprofile,zlogin,zlogout,csh.cshrc,csh.login,kshrc,inittab,inetd.conf,xinetd.conf}'
+          - '/etc/{zsh,xinetd.d,bash_completion.d,local.d}/*'
+          - '/etc/fish/config.fish'
+          - '/etc/fish/conf.d/*'
+          - '/etc/rc{0,1,2,3,4,5,6,S}.d/*'
+          - '/etc/rc.d/rc{0,1,2,3,4,5,6}.d/*'
+          - '/etc/runlevels/*/*'
+          - '/etc/{default,sysconfig}/*'
+          - '/{usr/lib,run}/udev/rules.d/*'
+          - '/{usr/lib,run}/{modules-load.d,modprobe.d}/*'
+          - '/{etc,run,usr/lib}/binfmt.d/*'
+          - '/{etc,usr/lib}/environment.d/*'
+          - '%UserHome%/.config/environment.d/*'
+          - '/etc/X11/{Xsession.d,xinit/xinitrc.d}/*'
+          - '%UserHome%/.config/{autostart-scripts,plasma-workspace/env}/*'
 
   - name: linux.system_info
     category: system
@@ -132,14 +171,333 @@ artifacts:
         paths:
           - '/etc/{nginx,apache2,httpd}/**'
 
+  - name: linux.live.kernel
+    category: system
+    description: Snapshot of kernel and network state from /proc (loaded modules, taint flags, mounts, TCP/UDP/raw/packet sockets, ARP and routes, core_pattern and modprobe hooks, binfmt_misc handlers). Per-process data needs a future process source.
+    sources:
+      - os: [linux]
+        paths:
+          - '/proc/{cmdline,version,uptime,modules,mounts,swaps,filesystems}'
+          - '/proc/net/{tcp,tcp6,udp,udp6,raw,raw6,packet,unix,arp,route,ipv6_route,dev}'
+          - '/proc/sys/kernel/{tainted,modules_disabled,core_pattern,modprobe,randomize_va_space,kptr_restrict}'
+          - '/proc/sys/kernel/yama/ptrace_scope'
+          - '/proc/sys/net/ipv4/ip_forward'
+          - '/proc/sys/fs/binfmt_misc/*'
+        exclude:
+          - '/proc/sys/fs/binfmt_misc/register'
+
+  - name: linux.persistence.package_hooks
+    category: persistence
+    description: Package manager hooks and plugins that run as root on every apt, yum, dnf or pacman run.
+    sources:
+      - os: [linux]
+        paths:
+          - '/etc/apt/apt.conf'
+          - '/etc/apt/apt.conf.d/*'
+          - '/etc/yum/pluginconf.d/*'
+          - '/usr/lib/yum-plugins/*'
+          - '/etc/dnf/plugins/*'
+          - '/usr/lib/python3*/site-packages/dnf-plugins/*.py'
+          - '/etc/dnf/libdnf5-plugins/**'
+          - '/etc/pacman.d/hooks/*'
+          - '/usr/share/libalpm/hooks/*'
+
+  - name: linux.persistence.pam_modules
+    category: persistence
+    description: PAM module libraries (backdoored pam_unix.so or rogue modules such as Plague; compare hashes with the package md5sums).
+    references:
+      - https://www.nextron-systems.com/2025/08/01/plague-a-newly-discovered-pam-based-backdoor-for-linux/
+    sources:
+      - os: [linux]
+        paths:
+          - '/usr/{lib,lib64}/security/*.so'
+          - '/usr/lib/*-linux-gnu/security/*.so'
+
+  - name: linux.persistence.boot
+    category: persistence
+    description: Boot loader and initramfs configuration (GRUB, boot loader specification entries, kernel command line, initramfs-tools and dracut hooks).
+    sources:
+      - os: [linux]
+        paths:
+          - '/etc/default/grub'
+          - '/etc/{default/grub.d,grub.d}/*'
+          - '/boot/{grub,grub2}/{grub.cfg,grubenv,custom.cfg,user.cfg}'
+          - '/boot/efi/EFI/*/{grub.cfg,grubenv}'
+          - '/boot/loader/entries/*.conf'
+          - '/etc/kernel/cmdline'
+          - '/etc/initramfs-tools/**'
+          - '/usr/share/initramfs-tools/{hooks,scripts}/**'
+          - '/etc/dracut.conf'
+          - '/etc/dracut.conf.d/*'
+          - '/usr/lib/dracut/modules.d/**'
+
+  - name: linux.persistence.network_hooks
+    category: persistence
+    description: Scripts run on network events (NetworkManager and networkd dispatchers, ifupdown, dhclient and PPP hooks).
+    sources:
+      - os: [linux]
+        paths:
+          - '/{etc,usr/lib}/NetworkManager/dispatcher.d/**'
+          - '/etc/network/{if-pre-up.d,if-up.d,if-down.d,if-post-down.d,interfaces.d}/*'
+          - '/{etc,usr/lib}/networkd-dispatcher/**'
+          - '/etc/dhcp/{dhclient-enter-hooks.d,dhclient-exit-hooks.d,dhclient.d}/*'
+          - '/etc/dhcp/{dhclient-enter-hooks,dhclient-exit-hooks,dhclient.conf}'
+          - '/etc/ppp/{ip-up.d,ip-down.d}/*'
+
+  - name: linux.persistence.dbus_polkit
+    category: persistence
+    description: polkit rules and D-Bus service activation files (root services started on demand, permissive authorization rules).
+    sources:
+      - os: [linux]
+        paths:
+          - '/etc/polkit-1/**'
+          - '/usr/share/polkit-1/rules.d/*'
+          - '/var/lib/polkit-1/**'
+          - '/etc/dbus-1/**'
+          - '/usr/share/dbus-1/{system.d,session.d,system-services,services}/*'
+          - '%UserHome%/.local/share/dbus-1/services/*'
+
+  - name: linux.persistence.python_hooks
+    category: persistence
+    description: Python startup hooks (.pth files, sitecustomize and usercustomize). Legitimate .pth files exist; review their content.
+    sources:
+      - os: [linux]
+        paths:
+          - '/usr/{lib,lib64,local/lib}/python3*/{site,dist}-packages/{*.pth,sitecustomize.py,usercustomize.py}'
+          - '/usr/{lib,lib64,local/lib}/python3*/{sitecustomize,usercustomize}.py'
+          - '/etc/python3*/sitecustomize.py'
+          - '%UserHome%/.local/lib/python3*/site-packages/{*.pth,usercustomize.py}'
+
+  - name: linux.packages.dpkg_info
+    category: system
+    description: dpkg maintainer scripts, md5sums (offline integrity check), conffiles, diversions, statoverrides and package status backups.
+    sources:
+      - os: [linux]
+        paths:
+          - '/var/lib/dpkg/info/*.{preinst,postinst,prerm,postrm,config,triggers,md5sums,conffiles}'
+          - '/var/lib/dpkg/{diversions,statoverride,status-old}'
+          - '/var/backups/dpkg.{status,diversions,statoverride}*'
+          - '/var/lib/apt/extended_states'
+
+  - name: linux.security_config
+    category: system
+    description: Audit, logging and access control configuration (auditd rules and plugins, logrotate, syslog-ng, SELinux, AppArmor, iptables/nftables/ufw/firewalld, fail2ban); shows defense evasion before encryption.
+    sources:
+      - os: [linux]
+        paths:
+          - '/etc/audit/{auditd.conf,audit.rules,audit-stop.rules}'
+          - '/etc/audit/{rules.d,plugins.d}/*'
+          - '/etc/audisp/**'
+          - '/etc/logrotate.conf'
+          - '/etc/logrotate.d/*'
+          - '/etc/syslog.conf'
+          - '/etc/syslog-ng/**'
+          - '/etc/selinux/config'
+          - '/sys/fs/selinux/enforce'
+          - '/sys/kernel/security/apparmor/profiles'
+          - '/etc/apparmor.d/**'
+          - '/etc/{iptables,nftables,firewalld,ufw,fail2ban}/**'
+          - '/etc/nftables.conf'
+          - '/etc/sysconfig/{iptables,ip6tables,nftables.conf}'
+
+  - name: linux.network_config
+    category: network
+    description: DHCP leases (IP address history) and NetworkManager and network-scripts configuration (no Wi-Fi or VPN secrets).
+    sources:
+      - os: [linux]
+        paths:
+          - '/var/lib/dhcp/*.leases'
+          - '/var/lib/dhclient/*'
+          - '/var/lib/NetworkManager/{*.lease,timestamps,seen-bssids}'
+          - '/run/systemd/netif/leases/*'
+          - '/etc/NetworkManager/NetworkManager.conf'
+          - '/etc/NetworkManager/conf.d/*'
+          - '/etc/sysconfig/network-scripts/ifcfg-*'
+
+  - name: linux.directory_services
+    category: accounts
+    description: Kerberos, realmd, Samba and LDAP client configuration (domain membership). SSSD configuration is not collected because it can hold bind passwords.
+    sources:
+      - os: [linux]
+        paths:
+          - '/etc/{krb5.conf,realmd.conf}'
+          - '/etc/krb5.conf.d/*'
+          - '/etc/samba/smb.conf'
+          - '/etc/{ldap,openldap}/ldap.conf'
+
+  - name: linux.containers.config
+    category: containers
+    description: Container configuration (Docker containers and daemon, containerd, Podman and Quadlet units, Kubernetes static pods and kubelet, k3s and RKE2 manifests); shows privileged containers, host mounts and container persistence. Environment variables in container configs can hold secrets.
+    sources:
+      - os: [linux]
+        paths:
+          - '/etc/docker/daemon.json'
+          - '/var/lib/docker/containers/*/{config.v2.json,hostconfig.json,hosts,resolv.conf,hostname}'
+          - '/var/lib/docker/image/*/repositories.json'
+          - '%UserHome%/.local/share/docker/containers/*/{config.v2.json,hostconfig.json}'
+          - '/etc/containerd/config.toml'
+          - '/var/lib/containerd/io.containerd.metadata.v1.bolt/meta.db'
+          - '/run/containerd/io.containerd.runtime.v2.task/*/*/{config.json,options.json,log.json}'
+          - '/etc/containers/{containers.conf,registries.conf,storage.conf,policy.json}'
+          - '/{etc,usr/share}/containers/systemd/**'
+          - '%UserHome%/.config/containers/systemd/**'
+          - '/var/lib/containers/storage/{db.sql,libpod/bolt_state.db}'
+          - '/var/lib/containers/storage/overlay-containers/{containers.json,*/userdata/config.json}'
+          - '%UserHome%/.local/share/containers/storage/{db.sql,libpod/bolt_state.db}'
+          - '/etc/kubernetes/manifests/*'
+          - '/var/lib/kubelet/config.yaml'
+          - '/var/lib/rancher/{k3s,rke2}/server/manifests/**'
+          - '/etc/rancher/{k3s,rke2}/{config.yaml,registries.yaml}'
+
+  - name: linux.containers.logs
+    category: containers
+    description: Container logs (Docker json-file and local drivers, Kubernetes pod logs, Podman). Can be very large.
+    sources:
+      - os: [linux]
+        paths:
+          - '/var/lib/docker/containers/*/*-json.log*'
+          - '/var/lib/docker/containers/*/local-logs/*'
+          - '/var/log/pods/**'
+          - '/var/lib/containers/storage/overlay-containers/*/userdata/ctr.log'
+
+  - name: linux.cloud_agents
+    category: execution
+    description: cloud-init user data and per-boot scripts, AWS SSM Run Command scripts and output, Azure run-command and custom script downloads (commands run with stolen cloud credentials). User data and command output can hold secrets.
+    references:
+      - https://www.sans.org/blog/living-off-the-cloud
+    sources:
+      - os: [linux]
+        paths:
+          - '/etc/cloud/cloud.cfg'
+          - '/etc/cloud/cloud.cfg.d/*'
+          - '/var/lib/cloud/instances/*/{user-data.txt,vendor-data.txt,cloud-config.txt}'
+          - '/var/lib/cloud/instances/*/scripts/**'
+          - '/var/lib/cloud/scripts/**'
+          - '/etc/amazon/ssm/*'
+          - '/var/lib/amazon/ssm/*/document/orchestration/**'
+          - '/var/lib/waagent/{run-command,run-command-handler,custom-script}/download/**'
+
+  - name: linux.web.app_config
+    category: server
+    description: PHP and PHP-FPM configuration, .htaccess and .user.ini files in web roots (auto_prepend_file and handler remaps used by webshells), Tomcat configuration (not tomcat-users.xml, which holds passwords) and compiled JSP files that survive deletion of the .jsp.
+    sources:
+      - os: [linux]
+        paths:
+          - '/etc/php/**'
+          - '/etc/{php.ini,php-fpm.conf}'
+          - '/etc/{php.d,php-fpm.d}/*'
+          - '/var/www/**/{.htaccess,.user.ini}'
+          - '/srv/**/{.htaccess,.user.ini}'
+          - '%UserHome%/public_html/**/{.htaccess,.user.ini}'
+          - '/etc/tomcat*/{server.xml,web.xml,context.xml,catalina.properties}'
+          - '/{opt,usr/share,usr/local,var/lib}/*tomcat*/conf/{server.xml,web.xml,context.xml}'
+          - '/var/cache/tomcat*/Catalina/**/*_jsp.{java,class}'
+          - '/{opt,usr/share,usr/local}/*tomcat*/work/Catalina/**/*_jsp.{java,class}'
+
+  - name: linux.logs.apps
+    category: logs
+    description: Application server logs outside /var/log (Tomcat, source-built nginx and Apache, XAMPP, RHEL PostgreSQL logs and configuration).
+    sources:
+      - os: [linux]
+        paths:
+          - '/{opt,usr/share,usr/local}/*tomcat*/logs/*'
+          - '/usr/local/{nginx,apache2}/logs/*'
+          - '/opt/lampp/logs/*'
+          - '/var/lib/pgsql/{data,*/data}/{log,pg_log}/*'
+          - '/var/lib/pgsql/{data,*/data}/{postgresql.conf,pg_hba.conf}'
+
+  - name: linux.appliance.vcenter
+    category: logs
+    description: VMware vCenter Server Appliance logs (SSO, vpxd, proxies, appliance management) and configuration. /var/log/vmware is a symbolic link on the appliance, so linux.logs.var_log does not reach them.
+    references:
+      - https://knowledge.broadcom.com/external/article/381722
+    sources:
+      - os: [linux]
+        paths:
+          - '/storage/log/vmware/{sso,vpxd,vpxd-svcs,rhttpproxy,envoy,vsphere-ui,applmgmt,vmon,sca}/**'
+          - '/etc/vmware/**'
+          - '/etc/sysconfig/init'
+
+  - name: linux.mail.spool
+    category: logs
+    description: root's mailbox (output of cron jobs, often revealing miners and backdoors).
+    sources:
+      - os: [linux]
+        paths:
+          - '/var/spool/mail/root'
+          - '/var/mail/root'
+
+  - name: linux.locate_db
+    category: file_system
+    description: locate databases (file names at the last updatedb run, including since deleted attacker tools).
+    sources:
+      - os: [linux]
+        paths:
+          - '/var/lib/{plocate/plocate.db,mlocate/mlocate.db}'
+          - '/var/cache/locate/locatedb'
+
+  - name: linux.desktop.user_activity
+    category: user_activity
+    description: Recently used files, GVFS metadata, trash information, X session errors and AccountsService user records (desktop systems).
+    sources:
+      - os: [linux]
+        paths:
+          - '%UserHome%/.local/share/{recently-used.xbel,gvfs-metadata/*}'
+          - '%UserHome%/.local/share/Trash/info/*.trashinfo'
+          - '%UserHome%/.xsession-errors*'
+          - '/var/lib/AccountsService/users/*'
+
+  - name: linux.remote_access_tools
+    category: remote_access
+    description: Logs of remote access tools on Linux (AnyDesk, TeamViewer, RustDesk, Splashtop); no configuration with access passwords.
+    sources:
+      - os: [linux]
+        paths:
+          - '%UserHome%/.anydesk/*.trace'
+          - '%UserHome%/.local/share/teamviewer*/logfiles/*.log'
+          - '%UserHome%/.local/share/logs/RustDesk/**'
+          - '/opt/splashtop*/log/*'
+
+  - name: linux.staging_dirs
+    category: file_system
+    description: Contents of /tmp, /var/tmp (including systemd private temporary directories of services) and /dev/shm, where droppers, miners, tunnels and exfiltration archives are staged. Unbounded; may contain malware.
+    sources:
+      - os: [linux]
+        paths:
+          - '/tmp/**'
+          - '/var/tmp/**'
+          - '/dev/shm/**'
+
+  - name: linux.binaries.local
+    category: execution
+    description: Locally installed binaries (/usr/local/bin, /usr/local/sbin) and out-of-tree kernel modules (extra, updates). 10 to 500 MB.
+    sources:
+      - os: [linux]
+        paths:
+          - '/usr/local/{bin,sbin}/*'
+          - '/usr/lib/modules/*/{extra,updates}/**'
+
+  - name: linux.boot.images
+    category: persistence
+    description: Kernel, initramfs and EFI boot images (bootkits, modified initramfs). 30 to 150 MB per image.
+    sources:
+      - os: [linux]
+        paths:
+          - '/boot/{initrd.img,vmlinuz}-*'
+          - '/boot/initramfs-*.img'
+          - '/boot/efi/EFI/**/*.efi'
+
   - name: unix.shell_history
     category: execution
-    description: Shell, REPL and tool histories of every user (bash, zsh, fish, python, mysql, psql, less, vim, wget).
+    description: Shell, REPL and tool histories of every user (bash, zsh, fish, python, php, ruby, mysql, psql, mongo, redis, less, vim, nano, wget).
     sources:
       - os: [linux, darwin]
         paths:
           - '%UserHome%/.{bash_history,zsh_history,sh_history,ash_history,history,python_history,mysql_history,psql_history,sqlite_history,rediscli_history,node_repl_history,lesshst,viminfo,wget-hsts}'
+          - '%UserHome%/.{zhistory,php_history,irb_history,dbshell,bash_history-*,bash_history.*}'
           - '%UserHome%/.local/share/fish/fish_history'
+          - '%UserHome%/.mongodb/mongosh/mongosh_repl_history'
+          - '%UserHome%/.local/share/{nano/search_history,mc/history}'
       - os: [darwin]
         paths:
           - '%UserHome%/.zsh_sessions/*'
@@ -151,15 +509,21 @@ artifacts:
     sources:
       - os: [linux, darwin]
         paths:
-          - '%UserHome%/.{bashrc,bash_profile,bash_login,bash_logout,profile,zshrc,zshenv,zprofile,zlogin,zlogout,inputrc,gitconfig,selected_editor}'
+          - '%UserHome%/.{bashrc,bash_profile,bash_login,bash_logout,bash_aliases,profile,zshrc,zshenv,zprofile,zlogin,zlogout,inputrc,gitconfig,selected_editor}'
+          - '%UserHome%/.{xinitrc,xsession,xsessionrc,xprofile}'
           - '%UserHome%/.config/fish/config.fish'
+          - '%UserHome%/.config/fish/conf.d/*'
+          - '%UserHome%/.config/git/config'
 
   - name: unix.ssh
     category: remote_access
-    description: SSH server/client configuration, login scripts (sshrc, ~/.ssh/rc, ~/.ssh/environment) and per-user authorized_keys, known_hosts and config (no private keys).
+    description: SSH server/client configuration, host public keys, login scripts (sshrc, ~/.ssh/rc, ~/.ssh/environment), per-user authorized_keys and known_hosts (with backup copies), public keys and rhosts/equiv trust files (no private keys).
     sources:
       - os: [linux, darwin]
         paths:
-          - '/etc/ssh/{sshd_config,ssh_config,sshrc}'
+          - '/etc/ssh/{sshd_config,ssh_config,sshrc,ssh_known_hosts}'
+          - '/etc/ssh/ssh_host_*_key.pub'
           - '/etc/ssh/{sshd_config.d,ssh_config.d}/*'
-          - '%UserHome%/.ssh/{authorized_keys,authorized_keys2,known_hosts,config,rc,environment}'
+          - '%UserHome%/.ssh/{authorized_keys*,known_hosts*,*.pub,config,rc,environment}'
+          - '/etc/{hosts.equiv,shosts.equiv}'
+          - '%UserHome%/.{rhosts,shosts}'
