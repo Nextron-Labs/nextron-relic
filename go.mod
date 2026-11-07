@@ -2,6 +2,8 @@ module github.com/Nextron-Labs/nextron-relic
 
 go 1.26.0
 
+toolchain go1.26.10
+
 require (
 	github.com/klauspost/compress v1.20.3
 	github.com/spf13/cobra v1.10.2

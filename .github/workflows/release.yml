@@ -1,12 +1,16 @@
 name: release
 
-# Pushing a version tag builds and publishes a GitHub release:
+# Pushing a version tag builds, tests and publishes a GitHub release:
 #
-#   git tag v0.1.0 && git push origin v0.1.0
+#   git tag -a v0.1.1 -m "Relic 0.1.1" && git push origin v0.1.1
 #
 # Accepted tags: v<major>.<minor>[.<patch>][-<pre-release>], e.g. v0.1,
 # v0.1.0, v1.2.3-rc.1. Tags with a pre-release suffix are published as
 # pre-releases.
+#
+# Order: ci (tests on all platforms) -> build (release binaries with
+# version stamp) -> smoke (exactly these binaries run on Linux, Windows and
+# macOS runners) -> publish. Nothing is published if any step fails.
 #
 # If a (draft) release for the tag already exists, its title and notes are
 # kept, the binaries are attached and the draft is published. Otherwise the
@@ -27,9 +31,66 @@ concurrency:
 jobs:
   ci:
     uses: ./.github/workflows/ci.yml
+    with:
+      skip-smoke: true
 
-  release:
+  build:
     needs: ci
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.tag.outputs.version }}
+    env:
+      TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: Check tag
+        id: tag
+        run: |
+          if ! printf '%s' "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+(\.[0-9]+)?(-[0-9A-Za-z.-]+)?$'; then
+            echo "::error::tag $TAG is not a version tag (expected e.g. v0.1.0 or v1.2.3-rc.1)"
+            exit 1
+          fi
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Check Go toolchain
+        run: make check-go
+
+      - name: Build binaries
+        env:
+          VERSION: ${{ steps.tag.outputs.version }}
+        run: make dist VERSION="$VERSION" COMMIT="$(git rev-parse --short=12 HEAD)"
+
+      - name: Verify version stamp and checksums
+        env:
+          VERSION: ${{ steps.tag.outputs.version }}
+        run: |
+          out="$(./dist/relic-"$VERSION"-linux-amd64 version)"
+          echo "$out"
+          case "$out" in "relic $VERSION "*) ;; *) echo "::error::binary reports '$out'"; exit 1 ;; esac
+          (cd dist && sha256sum -c SHA256SUMS)
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: relic-release
+          path: dist/
+          if-no-files-found: error
+
+  smoke:
+    needs: build
+    uses: ./.github/workflows/smoke.yml
+    with:
+      artifact: relic-release
+      version: ${{ needs.build.outputs.version }}
+
+  publish:
+    needs: [build, smoke]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -37,31 +98,14 @@ jobs:
       TAG: ${{ github.ref_name }}
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
         with:
-          fetch-depth: 0
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-
-      - name: Check tag
-        run: |
-          if ! printf '%s' "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+(\.[0-9]+)?(-[0-9A-Za-z.-]+)?$'; then
-            echo "::error::tag $TAG is not a version tag (expected e.g. v0.1.0 or v1.2.3-rc.1)"
-            exit 1
-          fi
-          echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
-
-      - name: Build binaries
-        run: make dist VERSION="$VERSION" COMMIT="$(git rev-parse --short=12 HEAD)"
-
-      - name: Verify version stamp
-        run: |
-          out="$(./dist/relic-"$VERSION"-linux-amd64 version)"
-          echo "$out"
-          case "$out" in "relic $VERSION "*) ;; *) echo "::error::binary reports '$out'"; exit 1 ;; esac
-          (cd dist && sha256sum -c SHA256SUMS)
+          name: relic-release
+          path: dist
 
       - name: Publish release
-        run: scripts/publish-release.sh "$TAG" dist/*
+        run: |
+          (cd dist && sha256sum -c SHA256SUMS)
+          scripts/publish-release.sh "$TAG" dist/*

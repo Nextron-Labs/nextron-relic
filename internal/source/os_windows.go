@@ -62,7 +62,7 @@ func filetime(v int64) *time.Time {
 }
 
 func openOS(path string, follow bool) (*File, error) {
-	p, err := windows.UTF16PtrFromString(path)
+	p, err := windows.UTF16PtrFromString(nativePath(path))
 	if err != nil {
 		return nil, err
 	}

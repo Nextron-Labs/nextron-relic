@@ -119,7 +119,7 @@ func (a *Accessor) ResolverFS(method string) (pathspec.FS, error) {
 		}
 		return a.raw, nil
 	}
-	return pathspec.OSFS{}, nil
+	return osFS(), nil
 }
 
 // Open opens path with the requested method.

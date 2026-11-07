@@ -6,10 +6,27 @@ as the release notes when its tag is pushed (see `docs/releasing.md`).
 
 ## [Unreleased]
 
+### Fixed
+
+- **32-bit Windows binary on 64-bit Windows (WoW64):** Windows silently
+  redirected file access below `%SystemRoot%\System32` to `SysWOW64`, so
+  registry hives, event logs, scheduled tasks and other System32 artifacts
+  were not found. Relic now reaches the real System32 directory. It also
+  reads the 64-bit registry view for user profiles and the OS version, and
+  resolves `%ProgramFiles%` to the native `Program Files` directory.
+
 ### Changed
 
 - Clarified that raw NTFS access on Windows needs an elevated process
   (administrator or LocalSystem).
+- **Go 1.26.10.** Binaries are built with the latest Go 1.26 patch release
+  (0.1.0 used 1.26.0). The toolchain is pinned in `go.mod`, and release
+  builds fail on any other version.
+- **Release smoke test.** Release binaries are run on Linux, Windows
+  (including 32-bit under WoW64) and macOS runners before they are
+  published. The same test runs for every pull request.
+- **CI actions** updated to their current major versions (Node.js 24
+  runtime).
 
 ## [0.1.0]
 

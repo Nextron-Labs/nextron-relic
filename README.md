@@ -63,22 +63,33 @@ Download the binary for your platform from the
 and verify it with `SHA256SUMS`, or build it:
 
 ```bash
-make            # ./relic for the host (requires Go 1.26+)
+make            # ./relic for the host (Go 1.26+; the go command fetches the toolchain pinned in go.mod)
 make dist       # dist/relic-<version>-<os>-<arch>[.exe] for all platforms + SHA256SUMS
 make test       # unit and integration tests
 ```
 
 ## Platform support
 
-| Platform | Built | Tested |
-|---|---|---|
-| macOS arm64 | yes | Unit and integration tests. Real collections as an unprivileged user (macOS 27, Apple Silicon). |
-| macOS amd64 | yes | Not run. |
-| Linux amd64 | yes | Real `standard` collection as root in Debian 13 (Docker, emulated amd64). |
-| Linux arm64 | yes | Full test suite as root (Docker, Debian 13). |
-| Linux 386 | yes | Not run. |
-| Windows amd64 | yes | **Not run on Windows yet.** The Windows path logic and the raw NTFS pipeline are tested on macOS/Linux against an NTFS image. CI (`.github/workflows/ci.yml`) adds live tests on elevated Windows runners: `$MFT`, `$UsnJrnl:$J`, the locked SYSTEM hive, event logs. |
-| Windows 386, arm64 | yes | Not run. |
+| Platform | Built | Smoke test of the built binary (CI and release) | Other testing |
+|---|---|---|---|
+| Windows amd64 | yes | yes, elevated GitHub Windows runner | Test suite in CI, including live raw NTFS tests (`$MFT`, `$UsnJrnl:$J`, locked SYSTEM hive via raw fallback, event logs). Not yet run on production endpoints. |
+| Windows 386 | yes | yes, as 32-bit process on 64-bit Windows (WoW64) | – |
+| Windows arm64 | yes | no | Not run. |
+| Linux amd64 | yes | yes, as root on a GitHub Ubuntu runner | Test suite in CI (also as root). Release 0.1.0 binary run in Debian 13 (Docker). |
+| Linux 386 | yes | yes, as root on 64-bit Ubuntu | Release 0.1.0 binary run in Debian 13 (Docker). |
+| Linux arm64 | yes | no | Test suite as root and release 0.1.0 binary in Docker (Debian 13, Alpine 3.20). |
+| macOS arm64 | yes | yes, unprivileged GitHub macOS runner | Test suite in CI; real collections on macOS 27 (Apple Silicon). |
+| macOS amd64 | yes | no | Not run. |
+
+The smoke test (`.github/workflows/smoke.yml`, `scripts/smoke-test.sh`) runs
+the cross-compiled binary itself, not `go test`. It checks:
+
+- the checksum and the version stamp,
+- the example configurations,
+- a `minimal` collection, verifying every file hash in the archive,
+- on Windows, that the locked SYSTEM hive was read through raw NTFS.
+
+Releases are only published if it passes.
 
 Minimum versions follow the Go toolchain: Windows 10 / Server 2016, macOS 12,
 Linux kernel 3.2.
