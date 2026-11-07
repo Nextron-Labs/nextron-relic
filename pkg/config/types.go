@@ -101,7 +101,8 @@ type Limits struct {
 type Output struct {
 	// Path of the archive. Placeholders: {hostname}, {timestamp}, {job_id}.
 	// If the path is an existing directory or ends with a path separator, a
-	// default file name is created inside it.
+	// default file name is created inside it. Otherwise ".zip" is appended
+	// unless the file name already ends in ".zip".
 	Path             string `yaml:"path" json:"path"`
 	Compression      string `yaml:"compression" json:"compression"`
 	CompressionLevel int    `yaml:"compression_level" json:"compression_level"`

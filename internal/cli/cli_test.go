@@ -76,6 +76,43 @@ limits: {min_free_space: 0, priority: normal}
 	zr.Close()
 }
 
+// Issue #3: --output without a trailing separator and without .zip must not
+// create an extension-less archive.
+func TestCollectOutputWithoutExtension(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("uses Unix paths")
+	}
+	dir := t.TempDir()
+	data := writeFile(t, dir, "evidence.log", "evidence\n")
+	cfg := writeFile(t, dir, "c.yaml", `version: 1
+collect:
+  custom_artifacts:
+    - name: custom.evidence
+      sources:
+        - os: [linux, darwin]
+          paths: ['`+data+`']
+limits: {min_free_space: 0, priority: normal}
+`)
+	out := filepath.Join(dir, "relic-out")
+	code, stdout, stderr := runCLI(t, "collect", "-c", cfg, "-o", out, "--json")
+	if code != result.ExitComplete {
+		t.Fatalf("exit %d\n%s\n%s", code, stdout, stderr)
+	}
+	var res result.Result
+	if err := json.Unmarshal([]byte(stdout), &res); err != nil {
+		t.Fatal(err)
+	}
+	if res.Output == nil || res.Output.Path != out+".zip" {
+		t.Fatalf("output: %+v", res.Output)
+	}
+	if _, err := os.Stat(out); !os.IsNotExist(err) {
+		t.Errorf("%s must not exist: %v", out, err)
+	}
+	if !strings.Contains(stderr, "no .zip extension") {
+		t.Errorf("expected a warning on stderr: %s", stderr)
+	}
+}
+
 func TestCollectInvalidConfigStillPrintsJSON(t *testing.T) {
 	dir := t.TempDir()
 	cfg := writeFile(t, dir, "bad.yaml", "version: 1\ncollect:\n  profile: nope\n  methd: os\n")
