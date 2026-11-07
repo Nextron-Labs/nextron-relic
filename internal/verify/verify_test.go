@@ -27,6 +27,11 @@ func record(src, archivePath, data string) result.FileRecord {
 
 // build writes an archive with the given files, records and manifest summary.
 func build(t *testing.T, files []entry, recs []result.FileRecord, collected int, extra ...entry) string {
+	return buildWithConfig(t, files, recs, collected, "", extra...)
+}
+
+// buildWithConfig also records configSHA as config.sha256 in the manifest.
+func buildWithConfig(t *testing.T, files []entry, recs []result.FileRecord, collected int, configSHA string, extra ...entry) string {
 	t.Helper()
 	p := filepath.Join(t.TempDir(), "a.zip")
 	f, err := os.Create(p)
@@ -55,6 +60,7 @@ func build(t *testing.T, files []entry, recs []result.FileRecord, collected int,
 	m := result.Result{SchemaVersion: result.SchemaVersion, Tool: result.Tool{Name: "relic", Version: "test"},
 		Status: result.StatusComplete, Host: result.Host{Hostname: "h", OS: "linux"}}
 	m.Summary.FilesCollected = collected
+	m.Config.SHA256 = configSHA
 	mb, _ := json.Marshal(m)
 	add("manifest.json", string(mb))
 	for _, e := range extra {
@@ -130,5 +136,32 @@ func TestArchiveNotZip(t *testing.T) {
 	}
 	if _, err := Archive(filepath.Join(t.TempDir(), "missing.zip"), Options{}); err == nil {
 		t.Error("missing file must be an error")
+	}
+}
+
+func TestArchiveConfigHash(t *testing.T) {
+	cfg := "version: 1\ncollect: {profile: minimal}\n"
+	// Matching config.yaml.
+	p := buildWithConfig(t, nil, nil, 0, sha(cfg), entry{"config.yaml", cfg})
+	if rep, _ := Archive(p, Options{}); !rep.OK {
+		t.Errorf("matching config.yaml: %v", rep.Problems)
+	}
+	// Archives of 0.2.0 and earlier: no config.yaml and no hash for built-in runs.
+	if rep, _ := Archive(build(t, nil, nil, 0), Options{}); !rep.OK {
+		t.Errorf("old built-in archive: %v", rep.Problems)
+	}
+	for _, tc := range []struct {
+		sha   string
+		extra []entry
+		want  string
+	}{
+		{sha("other"), []entry{{"config.yaml", cfg}}, "the manifest records " + sha("other")},
+		{sha(cfg), nil, "missing config.yaml"},
+		{"", []entry{{"config.yaml", cfg}}, "records no config sha256"},
+	} {
+		rep, _ := Archive(buildWithConfig(t, nil, nil, 0, tc.sha, tc.extra...), Options{})
+		if rep.OK || !strings.Contains(strings.Join(rep.Problems, "\n"), tc.want) {
+			t.Errorf("want problem %q, got %v", tc.want, rep.Problems)
+		}
 	}
 }

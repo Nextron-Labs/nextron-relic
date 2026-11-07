@@ -104,9 +104,9 @@ relic verify out/relic.zip --result out/status.json --json
 
 Checks an archive without extracting it: the ZIP structure and the CRC-32 of
 every entry; that `manifest.json`, `files.jsonl`, `relic.log` and
-`config.effective.yaml` exist; that every stored file has a record and
-matches its recorded size and hashes; and that the manifest counters match
-the records. With `--result` (the `--json` output or `--status-file` of the
+`config.effective.yaml` exist; that `config.yaml` matches the configuration
+hash in the manifest; that every stored file has a record and matches its
+recorded size and hashes; and that the manifest counters match the records. With `--result` (the `--json` output or `--status-file` of the
 collection) the archive size and SHA-256 must also match, which proves the
 archive is the one the endpoint produced.
 

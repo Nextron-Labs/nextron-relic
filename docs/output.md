@@ -8,7 +8,7 @@ relic_HOST_20261106T142226Z.zip
 │   ├── C/Windows/System32/config/SYSTEM
 │   ├── C/$Extend/$UsnJrnl%3A$J
 │   └── var/log/auth.log
-├── config.yaml                the configuration exactly as provided (its SHA-256 is in the manifest)
+├── config.yaml                the input configuration: the --config file exactly as provided, or the built-in defaults (its SHA-256 is in the manifest)
 ├── config.effective.yaml      the configuration with all defaults and command line overrides
 ├── files.jsonl                one record per matched file (collected, skipped, failed, ...)
 ├── relic.log                  collection log (JSON lines, level info and above)
@@ -88,6 +88,16 @@ are only added within a version). Types: `pkg/result`.
   "errors": []
 }
 ```
+
+`config` identifies the input configuration: `source` is `file:<path>`,
+`stdin` or `builtin` (no `--config`), `sha256` is the hash of `config.yaml` in
+the archive, and `overrides` lists the command line flags applied to it.
+Without `--config`, `config.yaml` holds the built-in defaults with the
+`standard` profile; a flag such as `--profile minimal` then appears as the
+override `profile=minimal`, and `profile=` means that `--artifact` or `--path`
+replaced the default profile. `config.effective.yaml` is the result. Archives
+of Relic 0.2.0 and earlier have no `config.yaml` and an empty `sha256` for
+runs without `--config`.
 
 `output.size` and `output.sha256` are only known after the archive is
 closed. They are present in `--json` and `--status-file`, but not in the

@@ -108,6 +108,15 @@ as the release notes when its tag is pushed (see `docs/releasing.md`).
 
 ### Fixed
 
+- **`config.yaml` in every archive** ([#6](https://github.com/Nextron-Labs/nextron-relic/issues/6)):
+  runs without `--config` wrote no `config.yaml` and recorded an empty
+  `config.sha256`, although the archive layout documented the file as always
+  present. Such runs now archive the built-in defaults (`standard` profile) as
+  `config.yaml`, and `config.sha256` is its hash; command line flags are
+  listed in `config.overrides` (`profile=` when `--artifact`/`--path`
+  replaced the default profile) and the result is `config.effective.yaml`.
+  `relic verify` and the release smoke test check that `config.yaml` matches
+  the hash in the manifest.
 - **AnyDesk `service.conf` is no longer collected.** It holds the password
   hash and the client's private key, which contradicts the rule that the
   built-in catalog collects no credentials or private keys.

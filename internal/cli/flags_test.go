@@ -3,6 +3,8 @@ package cli
 import (
 	"archive/zip"
 	"bufio"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"io"
 	"os"
@@ -13,6 +15,7 @@ import (
 	"time"
 
 	"github.com/Nextron-Labs/nextron-relic/internal/verify"
+	"github.com/Nextron-Labs/nextron-relic/pkg/config"
 	"github.com/Nextron-Labs/nextron-relic/pkg/result"
 )
 
@@ -209,4 +212,47 @@ func readRecords(t *testing.T, archive string) []result.FileRecord {
 		rc.Close()
 	}
 	return out
+}
+
+// Issue #6: runs without --config archive the built-in configuration as
+// config.yaml, and the manifest hash resolves to it.
+func TestCollectBuiltinConfigArchived(t *testing.T) {
+	skipOnWindows(t)
+	dir := t.TempDir()
+	writeFile(t, dir, "a.log", "a\n")
+	res, _ := collectJSON(t, 0, "--path", filepath.Join(dir, "a.log"), "-o", filepath.Join(dir, "out.zip"))
+	if res.Config.Source != "builtin" || len(res.Config.SHA256) != 64 {
+		t.Fatalf("config info: %+v", res.Config)
+	}
+	if !strings.Contains(strings.Join(res.Config.Overrides, " "), "profile= ") {
+		t.Errorf("dropping the default profile must be recorded: %v", res.Config.Overrides)
+	}
+	zr, err := zip.OpenReader(res.Output.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer zr.Close()
+	var raw []byte
+	for _, f := range zr.File {
+		if f.Name == "config.yaml" {
+			rc, _ := f.Open()
+			raw, _ = io.ReadAll(rc)
+			rc.Close()
+		}
+	}
+	if raw == nil {
+		t.Fatal("archive has no config.yaml")
+	}
+	sum := sha256.Sum256(raw)
+	if hex.EncodeToString(sum[:]) != res.Config.SHA256 {
+		t.Error("config.yaml does not match config.sha256 in the result")
+	}
+	doc, issues := config.Parse(raw, "archive")
+	if issues.HasErrors() || doc.Config.Collect.Profile != "standard" {
+		t.Errorf("config.yaml must be the built-in defaults: %v %+v", issues, doc)
+	}
+	rep, err := verify.Archive(res.Output.Path, verify.Options{Expect: res.Output})
+	if err != nil || !rep.OK {
+		t.Fatalf("verify: %v %+v", err, rep)
+	}
 }

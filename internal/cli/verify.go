@@ -24,6 +24,7 @@ func newVerifyCmd(stdout, stderr io.Writer) *cobra.Command {
 
 - the ZIP structure and the CRC-32 of every entry,
 - manifest.json, files.jsonl, relic.log and config.effective.yaml are present,
+  and config.yaml matches the configuration hash in the manifest,
 - every stored file has a record in files.jsonl, and its size and hashes
   match the record,
 - the counters in the manifest match the records,
