@@ -104,4 +104,9 @@ args=(result.json --exit-code "$code")
 "$py" "$here/smoke-check.py" "${args[@]}"
 
 archive="$("$py" -c 'import json,sys; print(json.load(open(sys.argv[1]))["output"]["path"])' result.json)"
-"$bin" verify "$archive" --result result.json
+# "relic verify" exists since 0.3.0; older releases can still be re-tested.
+if "$bin" --help | grep -Eq '^[[:space:]]+verify[[:space:]]'; then
+	"$bin" verify "$archive" --result result.json
+else
+	echo "relic verify skipped: this version does not have the command"
+fi
