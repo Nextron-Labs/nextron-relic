@@ -24,6 +24,7 @@ const (
 	manifestName        = "manifest.json"
 	filesName           = "files.jsonl"
 	logName             = "relic.log"
+	configName          = "config.yaml"
 	configEffectiveName = "config.effective.yaml"
 	filesPrefix         = "files/"
 )
@@ -144,6 +145,7 @@ func Archive(path string, o Options) (*Report, error) {
 	}
 	if manifest != nil {
 		rep.checkSummary(manifest)
+		rep.checkConfig(manifest, entries[configName])
 	}
 
 	// Every stored file must have a record; metadata entries must be readable
@@ -155,7 +157,7 @@ func Archive(path string, o Options) (*Report, error) {
 			if !recorded[name] {
 				unrecorded = append(unrecorded, name)
 			}
-		case name == manifestName || name == filesName:
+		case name == manifestName || name == filesName || name == configName:
 			// already read
 		default:
 			if err := drain(f); err != nil {
@@ -276,6 +278,31 @@ func (r *Report) checkSummary(m *result.Result) {
 		if got := r.Records[string(c.status)]; got != c.manifest {
 			r.problem("%s lists %d %s files, the manifest summary %d", filesName, got, c.status, c.manifest)
 		}
+	}
+}
+
+// checkConfig ties config.yaml to the hash in the manifest. Archives of
+// Relic 0.2.0 and earlier have neither for runs without --config.
+func (r *Report) checkConfig(m *result.Result, f *zip.File) {
+	want := m.Config.SHA256
+	if f == nil {
+		if want != "" {
+			r.problem("missing %s (the manifest records config sha256 %s)", configName, want)
+		}
+		return
+	}
+	data, err := readAll(f)
+	if err != nil {
+		r.problem("%s: %v", configName, err)
+		return
+	}
+	sum := sha256.Sum256(data)
+	got := hex.EncodeToString(sum[:])
+	switch {
+	case want == "":
+		r.problem("%s is present but the manifest records no config sha256", configName)
+	case !strings.EqualFold(got, want):
+		r.problem("%s has sha256 %s, the manifest records %s", configName, got, want)
 	}
 }
 

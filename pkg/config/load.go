@@ -21,9 +21,11 @@ import (
 // information for error reporting.
 type Document struct {
 	Config *Config
-	// Raw is the original file content.
+	// Raw is the original file content. For built-in defaults (FromBuiltin)
+	// it is their YAML form, so that every archive carries its input
+	// configuration.
 	Raw []byte
-	// SHA256 of Raw (hex). Empty for built-in defaults.
+	// SHA256 of Raw (hex). Empty if Raw is nil (FromConfig).
 	SHA256 string
 	// Source describes where the configuration came from ("file:<path>",
 	// "stdin" or "builtin").
@@ -65,9 +67,29 @@ func LoadFile(path string) (*Document, Issues) {
 	return Parse(data, source)
 }
 
-// FromConfig wraps a programmatically built configuration.
+// FromConfig wraps a programmatically built configuration. The document has
+// no raw form; collections from it carry no config.yaml.
 func FromConfig(c *Config, source string) *Document {
 	return &Document{Config: c, Source: source}
+}
+
+// BuiltinHeader starts the raw form of built-in configurations.
+const BuiltinHeader = "# Built-in configuration (relic collect without --config).\n" +
+	"# Command line flags change it (manifest.json: config.overrides); the result\n" +
+	"# is config.effective.yaml.\n"
+
+// FromBuiltin wraps built-in defaults that were not read from a file. Raw is
+// BuiltinHeader followed by the YAML form of c, and SHA256 its hash, so that
+// the input configuration of a run is archived and hashed like a file.
+// Parsing Raw yields c again.
+func FromBuiltin(c *Config) (*Document, error) {
+	data, err := c.Marshal()
+	if err != nil {
+		return nil, err
+	}
+	raw := append([]byte(BuiltinHeader), data...)
+	sum := sha256.Sum256(raw)
+	return &Document{Config: c, Raw: raw, SHA256: hex.EncodeToString(sum[:]), Source: "builtin"}, nil
 }
 
 var yamlLineRe = regexp.MustCompile(`^(?:yaml: )?line (\d+): (.*)$`)

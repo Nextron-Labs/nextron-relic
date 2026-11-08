@@ -174,8 +174,7 @@ func runCollect(cmd *cobra.Command, f *collectFlags, stdout, stderr io.Writer) e
 		logger = logging.Tee(logger, logging.NewFileHandler(lf, level))
 	}
 
-	useDefaultProfile := !cmd.Flags().Changed("profile") && len(f.artifacts) == 0 && len(f.paths) == 0
-	doc, issues := loadDocument(f.configPath, useDefaultProfile)
+	doc, issues := loadDocument(f.configPath)
 	var overrides []string
 	if doc != nil {
 		overrides, err = applyOverrides(cmd, doc.Config, f)
@@ -186,7 +185,7 @@ func runCollect(cmd *cobra.Command, f *collectFlags, stdout, stderr io.Writer) e
 			issues = append(issues, doc.Config.Validate().Errors()...)
 		}
 	}
-	if f.configPath == "" && !useDefaultProfile && doc != nil && doc.Config.Collect.Profile == "" {
+	if dropsDefaultProfile(cmd, f) && doc != nil && doc.Config.Collect.Profile == "" {
 		logger.Info("no profile selected: collecting only the artifacts and paths given on the command line (add --profile " + catalog.DefaultProfile + " to include the default profile)")
 	}
 	if issues.HasErrors() {
@@ -238,22 +237,38 @@ func runCollect(cmd *cobra.Command, f *collectFlags, stdout, stderr io.Writer) e
 	return silentExit(res.ExitCode)
 }
 
-// loadDocument loads the configuration file, or the built-in defaults
-// (with the default profile if defaultProfile is set) without a file.
-func loadDocument(path string, defaultProfile bool) (*config.Document, config.Issues) {
+// loadDocument loads the configuration file, or without a file the built-in
+// defaults with the default profile. Their YAML form is archived as
+// config.yaml, so every archive holds the configuration its flags changed.
+func loadDocument(path string) (*config.Document, config.Issues) {
 	if path == "" {
 		c := config.Default()
-		if defaultProfile {
-			c.Collect.Profile = catalog.DefaultProfile
+		c.Collect.Profile = catalog.DefaultProfile
+		doc, err := config.FromBuiltin(c)
+		if err != nil {
+			var is config.Issues
+			is.Errorf("", "built-in configuration: %v", err)
+			return nil, is
 		}
-		return config.FromConfig(c, "builtin"), nil
+		return doc, nil
 	}
 	return config.LoadFile(path)
+}
+
+// dropsDefaultProfile reports whether --artifact or --path select what to
+// collect without a configuration file and without --profile: then only those
+// are collected, not the default profile.
+func dropsDefaultProfile(cmd *cobra.Command, f *collectFlags) bool {
+	return f.configPath == "" && !cmd.Flags().Changed("profile") && (len(f.artifacts) > 0 || len(f.paths) > 0)
 }
 
 func applyOverrides(cmd *cobra.Command, c *config.Config, f *collectFlags) ([]string, error) {
 	var out []string
 	changed := cmd.Flags().Changed
+	if dropsDefaultProfile(cmd, f) {
+		c.Collect.Profile = ""
+		out = append(out, "profile=")
+	}
 	if changed("profile") {
 		c.Collect.Profile = f.profile
 		out = append(out, "profile="+f.profile)

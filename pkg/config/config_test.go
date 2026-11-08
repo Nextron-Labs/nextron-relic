@@ -1,6 +1,10 @@
 package config
 
 import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -176,5 +180,28 @@ func TestMarshalRoundTrip(t *testing.T) {
 	}
 	if doc.Config.Limits != c.Limits || doc.Config.Output != c.Output {
 		t.Errorf("round trip mismatch:\n%s", data)
+	}
+}
+
+func TestFromBuiltinRoundTrip(t *testing.T) {
+	c := Default()
+	c.Collect.Profile = "standard"
+	doc, err := FromBuiltin(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if doc.Source != "builtin" || len(doc.SHA256) != 64 || !bytes.HasPrefix(doc.Raw, []byte(BuiltinHeader)) {
+		t.Fatalf("document: source %q sha %q", doc.Source, doc.SHA256)
+	}
+	sum := sha256.Sum256(doc.Raw)
+	if hex.EncodeToString(sum[:]) != doc.SHA256 {
+		t.Error("SHA256 is not the hash of Raw")
+	}
+	parsed, issues := Parse(doc.Raw, "test")
+	if len(issues) != 0 {
+		t.Fatalf("raw form does not parse cleanly: %v", issues)
+	}
+	if !reflect.DeepEqual(parsed.Config, c) {
+		t.Errorf("round trip differs:\n%+v\n%+v", parsed.Config, c)
 	}
 }

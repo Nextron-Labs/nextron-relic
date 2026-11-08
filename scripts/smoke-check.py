@@ -7,6 +7,8 @@ Fails (exit 1) unless:
 - the result is complete or partial and matches the process exit code,
 - the archive exists and its size and SHA-256 match the result,
 - the archive contains manifest.json, files.jsonl, relic.log and config files,
+  and config.yaml matches the configuration hash in the manifest (both are
+  absent for built-in runs of 0.2.0 and earlier),
 - every collected file in the archive matches its recorded SHA-256 and size,
 - at least one file was collected,
 - (optional) the tool version matches,
@@ -68,6 +70,16 @@ def main():
             if required not in names:
                 fail(f"archive misses {required}")
         manifest = json.loads(z.read("manifest.json"))
+        # Since 0.3.0 every run records the hash of its input configuration and
+        # archives it as config.yaml; 0.2.0 and earlier have neither for
+        # built-in runs (re-testing published releases must still pass).
+        want_sha = (manifest.get("config") or {}).get("sha256") or ""
+        if want_sha or "config.yaml" in names:
+            if "config.yaml" not in names:
+                fail("archive misses config.yaml although the manifest records its sha256")
+            config_sha = hashlib.sha256(z.read("config.yaml")).hexdigest()
+            if config_sha != want_sha:
+                fail(f"config.yaml sha256 {config_sha} does not match the manifest ({want_sha!r})")
         if manifest.get("status") != status:
             fail(f"manifest status {manifest.get('status')!r} != {status!r}")
         records = [json.loads(line) for line in z.read("files.jsonl").splitlines() if line.strip()]
