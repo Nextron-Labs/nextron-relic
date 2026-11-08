@@ -113,7 +113,8 @@ Linux kernel 3.2.
 - [Output](docs/output.md): archive layout, file records, result JSON,
   status values and exit codes.
 - [Management Center integration](docs/management-center-integration.md):
-  playbook pattern and LocalSystem notes.
+  design guide with mockups for a native Artefact Collection component, and
+  how it connects to Relic.
 - [Design notes](docs/design.md): architecture, CyLR comparison, THOR
   reuse, licensing, assumptions, roadmap.
 - [Releasing](docs/releasing.md): tag-triggered release workflow and assets.

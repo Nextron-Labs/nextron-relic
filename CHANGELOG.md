@@ -121,6 +121,15 @@ as the release notes when its tag is pushed (see `docs/releasing.md`).
   hash and the client's private key, which contradicts the rule that the
   built-in catalog collects no credentials or private keys.
 
+### Documentation
+
+- The Management Center integration guide now describes a native Artefact
+  Collection component instead of a playbook: collection dialogue, results
+  section, mockups and the Relic interfaces behind them. The playbook pattern
+  remains as an appendix. See `docs/management-center-integration.md`.
+- `examples/management-center-windows-triage.yaml` now shows a generated
+  configuration and excludes its own work directory.
+
 ## [0.2.0]
 
 Maintenance release: archive naming fix, 32-bit Windows under WoW64, and a

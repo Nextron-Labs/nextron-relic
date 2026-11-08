@@ -166,3 +166,6 @@ Not adopted:
    - Registry-driven paths on Windows (transcript output directory,
      relocated event logs, Exchange and SQL Server install paths) and
      environment variables that may be missing without failing the run.
+9. **Interface additions for the Management Center component**, such as a
+   category in the result and machine-readable reasons. See
+   [what Relic should add](management-center-integration.md#7-what-relic-should-add).
