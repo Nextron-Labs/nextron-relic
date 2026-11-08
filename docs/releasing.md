@@ -39,9 +39,11 @@ otherwise.
    - macOS arm64, unprivileged.
 
    Each run checks the checksum and the version, validates the example
-   configurations and collects the `minimal` profile. The archive and every
-   file hash in it are verified. On Windows the locked SYSTEM registry hive
-   must have been read via raw NTFS.
+   configurations, resolves the `full` profile in a dry run (a pattern error
+   fails the test) and collects the `minimal` profile. The archive and every
+   file hash in it are verified by `scripts/smoke-check.py` and by
+   `relic verify`. On Windows the locked SYSTEM registry hive must have been
+   read via raw NTFS.
 4. **publish:** publishes the GitHub release with the binaries and
    `SHA256SUMS` (`scripts/publish-release.sh`):
    - If a release or draft for the tag already exists, its title and notes
@@ -65,7 +67,8 @@ gh workflow run smoke.yml -f tag=v0.1.0
 gh run watch "$(gh run list --workflow smoke.yml --limit 1 --json databaseId --jq '.[0].databaseId')"
 ```
 
-Locally, with the release assets in `dist/`:
+Releases before 0.3.0 have no `relic verify`; the test skips that step for
+them. Locally, with the release assets in `dist/`:
 
 ```bash
 EXPECTED_VERSION=0.1.0 scripts/smoke-test.sh dist darwin-arm64

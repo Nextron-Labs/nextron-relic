@@ -6,6 +6,21 @@ as the release notes when its tag is pushed (see `docs/releasing.md`).
 
 ## [Unreleased]
 
+## [0.3.0]
+
+Feature release: the artifact catalog grows from 77 to 171 artifacts,
+`relic verify` checks an archive without extracting it, and new flags cover
+ad-hoc paths, job metadata, limits and logging. Every archive now contains
+`config.yaml`.
+
+**When upgrading:**
+
+- `-a`/`--path` without `--profile` and `--config` now collects only what was
+  named, instead of adding to the `standard` profile. Add `--profile standard`
+  for the old behavior.
+- `standard` collects more than before, including the systemd journal, so
+  expect larger archives and longer runs.
+
 ### Added
 
 - **Artifact catalog: 171 artifacts (was 77).** Based on a comparison with
@@ -222,6 +237,7 @@ artifacts, shipped as a single static binary per platform.
 
 See README.md for details.
 
-[Unreleased]: https://github.com/Nextron-Labs/nextron-relic/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/Nextron-Labs/nextron-relic/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/Nextron-Labs/nextron-relic/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Nextron-Labs/nextron-relic/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Nextron-Labs/nextron-relic/releases/tag/v0.1.0

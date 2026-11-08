@@ -3,6 +3,7 @@ name: smoke
 # Runs the built binaries (not `go test`) on real runners:
 # - verifies the checksum from SHA256SUMS and the version stamp,
 # - runs the info commands and validates the example configurations,
+# - resolves the "full" profile in a dry run (a pattern error fails the test),
 # - collects the "minimal" profile (as root on Linux, elevated on Windows)
 #   and verifies the archive, manifest and every file hash,
 # - on Windows requires the locked SYSTEM registry hive to be read via raw
